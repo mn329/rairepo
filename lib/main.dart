@@ -1,22 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_dotenv/flutter_dotenv.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:rairepo/router.dart';
 
-Future<void> main() async {
-  WidgetsFlutterBinding.ensureInitialized();
-
-  try {
-    await dotenv.load(fileName: ".env");
-
-    await Supabase.initialize(
-      url: dotenv.env['SUPABASE_URL'] ?? '',
-      anonKey: dotenv.env['SUPABASE_ANON_KEY'] ?? '',
-    );
-  } catch (e) {
-    debugPrint('Error initializing Supabase or loading .env: $e');
-  }
-
+void main() {
   runApp(const MyApp());
 }
 
@@ -26,10 +11,18 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp.router(
-      title: 'Rairepo',
+      title: 'Live Report',
+      debugShowCheckedModeBanner: false,
       theme: ThemeData(
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
+        brightness: Brightness.dark,
+        scaffoldBackgroundColor: const Color(0xFF0A0A0A),
+        colorScheme: const ColorScheme.dark(
+          primary: Color(0xFFD4AF37), // Gold
+          surface: Color(0xFF101010),
+          onSurface: Colors.white,
+        ),
         useMaterial3: true,
+        fontFamily: 'Roboto', // Default, but can be customized
       ),
       routerConfig: router,
     );
