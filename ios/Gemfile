@@ -1,0 +1,4 @@
+source "https://rubygems.org"
+
+# CocoaPodsをインストール（バージョンを指定しないと最新が入りますが、固定もできます）
+gem "cocoapods"
