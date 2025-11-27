@@ -1,0 +1,45 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            // 1. 普段の開発はこれ！ (デバッグモード × 開発用データ)
+            "name": "rairepo (Debug Dev)",
+            "request": "launch",
+            "type": "dart",
+            "flutterMode": "debug",
+            "args": [
+                "--dart-define=FLAVOR=dev"
+            ]
+        },
+        {
+            // 2. 本番データでバグ調査したい時 (デバッグモード × 本番データ)
+            "name": "rairepo (Debug Prod)",
+            "request": "launch",
+            "type": "dart",
+            "flutterMode": "debug",
+            "args": [
+                "--dart-define=FLAVOR=prod"
+            ]
+        },
+        {
+            // 3. リリース前の最終確認 (リリースモード × 本番データ)
+            "name": "rairepo (Release Prod)",
+            "request": "launch",
+            "type": "dart",
+            "flutterMode": "release",
+            "args": [
+                "--dart-define=FLAVOR=prod"
+            ]
+        },
+        {
+            // 4. アプリが重い時の分析用 (プロファイル × 開発用データ)
+            "name": "rairepo (Profile Dev)",
+            "request": "launch",
+            "type": "dart",
+            "flutterMode": "profile",
+            "args": [
+                "--dart-define=FLAVOR=dev"
+            ]
+        }
+    ]
+}
