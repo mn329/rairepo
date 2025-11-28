@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
-import 'package:rairepo/router.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:recolle/router.dart';
+import 'package:recolle/theme/app_theme.dart';
 
 void main() {
-  runApp(const MyApp());
+  runApp(const ProviderScope(child: MyApp()));
 }
 
 class MyApp extends StatelessWidget {
@@ -13,18 +16,14 @@ class MyApp extends StatelessWidget {
     return MaterialApp.router(
       title: 'Live Report',
       debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        brightness: Brightness.dark,
-        scaffoldBackgroundColor: const Color(0xFF0A0A0A),
-        colorScheme: const ColorScheme.dark(
-          primary: Color(0xFFD4AF37), // Gold
-          surface: Color(0xFF101010),
-          onSurface: Colors.white,
-        ),
-        useMaterial3: true,
-        fontFamily: 'Roboto', // Default, but can be customized
-      ),
+      theme: AppTheme.darkTheme,
       routerConfig: router,
+      localizationsDelegates: const [
+        GlobalMaterialLocalizations.delegate,
+        GlobalWidgetsLocalizations.delegate,
+        GlobalCupertinoLocalizations.delegate,
+      ],
+      supportedLocales: const [Locale('ja', 'JP')],
     );
   }
 }

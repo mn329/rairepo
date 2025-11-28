@@ -3,7 +3,7 @@
     "configurations": [
         {
             // 1. 普段の開発はこれ！ (デバッグモード × 開発用データ)
-            "name": "rairepo (Debug Dev)",
+            "name": "Recolle (Debug Dev)",
             "request": "launch",
             "type": "dart",
             "flutterMode": "debug",
@@ -13,7 +13,7 @@
         },
         {
             // 2. 本番データでバグ調査したい時 (デバッグモード × 本番データ)
-            "name": "rairepo (Debug Prod)",
+            "name": "Recolle (Debug Prod)",
             "request": "launch",
             "type": "dart",
             "flutterMode": "debug",
@@ -23,7 +23,7 @@
         },
         {
             // 3. リリース前の最終確認 (リリースモード × 本番データ)
-            "name": "rairepo (Release Prod)",
+            "name": "Recolle (Release Prod)",
             "request": "launch",
             "type": "dart",
             "flutterMode": "release",
@@ -33,7 +33,7 @@
         },
         {
             // 4. アプリが重い時の分析用 (プロファイル × 開発用データ)
-            "name": "rairepo (Profile Dev)",
+            "name": "Recolle (Profile Dev)",
             "request": "launch",
             "type": "dart",
             "flutterMode": "profile",
