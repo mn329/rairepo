@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:recolle/theme/app_colors.dart';
 import '../models/live_ticket.dart';
 
 class TicketCard extends StatefulWidget {
@@ -52,7 +53,7 @@ class _TicketCardState extends State<TicketCard>
     if (color == TicketColor.blackGold) {
       return const LinearGradient(
         colors: [
-          Color(0xFF1A1A1A), // Slightly lighter black
+          AppColors.surfaceLight, // Slightly lighter black
           Color(0xFF000000),
         ],
         begin: Alignment.topLeft,
@@ -65,13 +66,13 @@ class _TicketCardState extends State<TicketCard>
   Color _getBackgroundColor(TicketColor color) {
     switch (color) {
       case TicketColor.blackGold:
-        return const Color(0xFF101010);
+        return AppColors.surface;
       case TicketColor.red:
-        return const Color(0xFF8B0000); // Dark Red
+        return AppColors.ticketRed; // Dark Red
       case TicketColor.blue:
-        return const Color(0xFF00008B); // Dark Blue
+        return AppColors.ticketBlue; // Dark Blue
       case TicketColor.white:
-        return const Color(0xFFF5F5F5); // White smoke
+        return AppColors.ticketWhite; // White smoke
     }
   }
 
@@ -79,17 +80,17 @@ class _TicketCardState extends State<TicketCard>
     if (color == TicketColor.white) {
       return Colors.black87;
     }
-    return Colors.white; // Default for dark cards
+    return AppColors.textPrimary; // Default for dark cards
   }
 
   Color _getAccentColor(TicketColor color) {
     if (color == TicketColor.blackGold) {
-      return const Color(0xFFD4AF37); // Gold
+      return AppColors.gold; // Gold
     }
     if (color == TicketColor.white) {
       return Colors.grey[600]!;
     }
-    return Colors.white70;
+    return AppColors.textSecondary;
   }
 
   String _formatDate(DateTime date) {
@@ -130,7 +131,7 @@ class _TicketCardState extends State<TicketCard>
             painter: TicketPainter(
               color: bgColor,
               borderColor: widget.ticket.color == TicketColor.blackGold
-                  ? const Color(0xFFD4AF37)
+                  ? AppColors.gold
                   : Colors.transparent,
             ),
             child: ClipPath(
@@ -245,17 +246,15 @@ class _TicketCardState extends State<TicketCard>
                               decoration: BoxDecoration(
                                 gradient: const LinearGradient(
                                   colors: [
-                                    Color(0xFFD4AF37),
-                                    Color(0xFFFFD700),
-                                    Color(0xFFD4AF37),
+                                    AppColors.gold,
+                                    AppColors.goldLight,
+                                    AppColors.gold,
                                   ],
                                 ),
                                 borderRadius: BorderRadius.circular(12),
                                 boxShadow: [
                                   BoxShadow(
-                                    color: const Color(
-                                      0xFFD4AF37,
-                                    ).withOpacity(0.4),
+                                    color: AppColors.gold.withOpacity(0.4),
                                     blurRadius: 8,
                                     spreadRadius: 1,
                                   ),

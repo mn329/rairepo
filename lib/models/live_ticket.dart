@@ -1,5 +1,3 @@
-import 'package:flutter/material.dart';
-
 enum TicketColor { blackGold, red, blue, white }
 
 class LiveTicket {
