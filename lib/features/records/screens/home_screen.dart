@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:recolle/features/detail/detail_screen.dart';
-import 'package:recolle/models/record.dart';
-import 'package:recolle/providers/records_provider.dart';
-import 'package:recolle/theme/app_colors.dart';
-import 'package:recolle/features/create/create_record_screen.dart';
-import 'package:recolle/widgets/record_ticket_card.dart';
+import 'package:recolle/features/records/screens/detail_screen.dart';
+import 'package:recolle/features/records/models/record.dart';
+import 'package:recolle/features/records/providers/records_provider.dart';
+import 'package:recolle/core/theme/app_colors.dart';
+import 'package:recolle/features/records/screens/create_record_screen.dart';
+import 'package:recolle/components/record_ticket_card.dart';
 
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
@@ -67,9 +67,13 @@ class HomeScreen extends ConsumerWidget {
   }
 
   Widget _buildRecordList(
-      BuildContext context, List<Record> allRecords, RecordType type) {
-    final filteredRecords =
-        allRecords.where((record) => record.type == type).toList();
+    BuildContext context,
+    List<Record> allRecords,
+    RecordType type,
+  ) {
+    final filteredRecords = allRecords
+        .where((record) => record.type == type)
+        .toList();
 
     if (filteredRecords.isEmpty) {
       return const Center(
@@ -100,4 +104,3 @@ class HomeScreen extends ConsumerWidget {
     );
   }
 }
-

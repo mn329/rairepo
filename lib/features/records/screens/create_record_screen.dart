@@ -5,8 +5,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:recolle/models/record.dart';
-import 'package:recolle/theme/app_colors.dart';
+import 'package:recolle/features/records/models/record.dart';
+import 'package:recolle/core/theme/app_colors.dart';
 
 class CreateRecordScreen extends HookConsumerWidget {
   const CreateRecordScreen({super.key});

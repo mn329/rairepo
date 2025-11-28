@@ -1,5 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:recolle/models/record.dart';
+import 'package:recolle/features/records/models/record.dart';
 
 final recordsProvider = Provider<List<Record>>((ref) {
   return [
@@ -57,4 +57,3 @@ final recordsProvider = Provider<List<Record>>((ref) {
     ),
   ];
 });
-

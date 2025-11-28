@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:recolle/models/record.dart';
-import 'package:recolle/theme/app_colors.dart';
+import 'package:recolle/features/records/models/record.dart';
+import 'package:recolle/core/theme/app_colors.dart';
 
 class DetailScreen extends StatelessWidget {
   final Record record;

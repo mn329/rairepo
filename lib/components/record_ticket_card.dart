@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:recolle/models/record.dart';
-import 'package:recolle/theme/app_colors.dart';
+import 'package:recolle/features/records/models/record.dart';
+import 'package:recolle/core/theme/app_colors.dart';
 
 class RecordTicketCard extends StatefulWidget {
   final Record record;
@@ -77,9 +77,7 @@ class _RecordTicketCardState extends State<RecordTicketCard>
             clipper: TicketClipper(),
             child: Container(
               height: 120, // 少し高さを調整
-              decoration: const BoxDecoration(
-                color: AppColors.surface,
-              ),
+              decoration: const BoxDecoration(color: AppColors.surface),
               child: Stack(
                 fit: StackFit.expand,
                 children: [
@@ -108,7 +106,10 @@ class _RecordTicketCardState extends State<RecordTicketCard>
 
                   // 2. Content
                   Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 24,
+                      vertical: 16,
+                    ),
                     child: Row(
                       children: [
                         // Main Info (Left)
