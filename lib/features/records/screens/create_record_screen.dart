@@ -7,6 +7,7 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:recolle/features/records/models/record.dart';
 import 'package:recolle/core/theme/app_colors.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 class CreateRecordScreen extends HookConsumerWidget {
   const CreateRecordScreen({super.key});
@@ -18,6 +19,7 @@ class CreateRecordScreen extends HookConsumerWidget {
     final date = useState<DateTime>(DateTime.now());
     final setlist = useState<List<String>>([]);
     final selectedImage = useState<File?>(null);
+    final isLoading = useState(false);
 
     // Controllers
     final titleController = useTextEditingController();
@@ -43,6 +45,86 @@ class CreateRecordScreen extends HookConsumerWidget {
       }
     }
 
+    Future<void> saveRecord() async {
+      if (isLoading.value) return;
+
+      if (titleController.text.isEmpty || artistController.text.isEmpty) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('タイトルとアーティスト名は必須です')));
+        return;
+      }
+
+      isLoading.value = true;
+
+      try {
+        String? imageUrl;
+        if (selectedImage.value != null) {
+          final fileName =
+              '${DateTime.now().millisecondsSinceEpoch}_${selectedImage.value!.path.split('/').last}';
+          debugPrint('Uploading image: $fileName'); // デバッグ出力
+          await Supabase.instance.client.storage
+              .from('ticket-images')
+              .upload(fileName, selectedImage.value!);
+
+          imageUrl = Supabase.instance.client.storage
+              .from('ticket-images')
+              .getPublicUrl(fileName);
+          debugPrint('Image uploaded, URL: $imageUrl'); // デバッグ出力
+        }
+
+        final record = Record(
+          id: '', // DB側で生成されるため空文字
+          type: selectedType.value,
+          title: titleController.text,
+          artistOrAuthor: artistController.text,
+          date: date.value,
+          ticketImageUrl: imageUrl ?? '',
+          ticketSource: sourceController.text.isEmpty
+              ? null
+              : sourceController.text,
+          setlist: setlist.value.isEmpty ? null : setlist.value.join('\n'),
+          mcMemo: mcMemoController.text.isEmpty ? null : mcMemoController.text,
+          impressions: impressionsController.text.isEmpty
+              ? null
+              : impressionsController.text,
+        );
+
+        // JSONに変換し、現在のユーザーIDを追加
+        final recordData = record.toJson();
+        final userId = Supabase.instance.client.auth.currentUser?.id;
+        if (userId != null) {
+          recordData['user_id'] = userId;
+        }
+
+        debugPrint('Inserting record: $recordData'); // デバッグ出力
+
+        await Supabase.instance.client.from('records').insert(recordData);
+
+        debugPrint('Record inserted successfully'); // デバッグ出力
+
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('記録を保存しました'),
+              backgroundColor: AppColors.gold,
+            ),
+          );
+          Navigator.of(context).pop();
+        }
+      } catch (e, stackTrace) {
+        debugPrint('Error saving record: $e'); // エラー内容出力
+        debugPrint('Stack trace: $stackTrace'); // スタックトレース出力
+        if (context.mounted) {
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text('エラーが発生しました: $e')));
+        }
+      } finally {
+        isLoading.value = false;
+      }
+    }
+
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
@@ -56,26 +138,32 @@ class CreateRecordScreen extends HookConsumerWidget {
           onPressed: () => Navigator.of(context).pop(),
         ),
         actions: [
-          TextButton(
-            onPressed: () {
-              // ダミー保存処理
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('記録を保存しました'),
-                  backgroundColor: AppColors.gold,
+          if (isLoading.value)
+            const Center(
+              child: Padding(
+                padding: EdgeInsets.only(right: 16.0),
+                child: SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(
+                    color: AppColors.gold,
+                    strokeWidth: 2,
+                  ),
                 ),
-              );
-              Navigator.of(context).pop();
-            },
-            child: const Text(
-              '保存',
-              style: TextStyle(
-                color: AppColors.gold,
-                fontWeight: FontWeight.bold,
-                fontSize: 16,
+              ),
+            )
+          else
+            TextButton(
+              onPressed: saveRecord,
+              child: const Text(
+                '保存',
+                style: TextStyle(
+                  color: AppColors.gold,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16,
+                ),
               ),
             ),
-          ),
         ],
       ),
       body: SingleChildScrollView(

@@ -212,31 +212,30 @@ class TicketClipper extends CustomClipper<Path> {
   @override
   Path getClip(Size size) {
     final path = Path();
-    const double cornerRadius = 16.0;
-    const double notchRadius = 8.0;
-    const double notchPositionRatio = 0.75; // Notch position
+    const double cornerRadius = 16.0; // 角の丸み
+    const double notchRadius = 8.0; // 切り欠きの大きさ
+    const double notchPositionRatio = 0.75; // 切り欠きの位置（右から25%）
 
+    // 左上からスタート
     path.moveTo(cornerRadius, 0);
 
-    // Top line
+    // 1. 上の辺を描いて、途中で半円（切り欠き）を描く
     path.lineTo(size.width * notchPositionRatio - notchRadius, 0);
-
-    // Top Notch
     path.arcToPoint(
       Offset(size.width * notchPositionRatio + notchRadius, 0),
       radius: const Radius.circular(notchRadius),
-      clockwise: false,
+      clockwise: false, // 反時計回りに描くと「凹み」になる
     );
 
     path.lineTo(size.width - cornerRadius, 0);
 
-    // Top Right Corner
+    // 右上の角
     path.quadraticBezierTo(size.width, 0, size.width, cornerRadius);
 
-    // Right line
+    // 右の辺
     path.lineTo(size.width, size.height - cornerRadius);
 
-    // Bottom Right Corner
+    // 右下の角
     path.quadraticBezierTo(
       size.width,
       size.height,
@@ -244,10 +243,8 @@ class TicketClipper extends CustomClipper<Path> {
       size.height,
     );
 
-    // Bottom line
+    // 2. 下の辺にも同様に切り欠きを描く
     path.lineTo(size.width * notchPositionRatio + notchRadius, size.height);
-
-    // Bottom Notch
     path.arcToPoint(
       Offset(size.width * notchPositionRatio - notchRadius, size.height),
       radius: const Radius.circular(notchRadius),
@@ -256,13 +253,13 @@ class TicketClipper extends CustomClipper<Path> {
 
     path.lineTo(cornerRadius, size.height);
 
-    // Bottom Left Corner
+    // 左下の角
     path.quadraticBezierTo(0, size.height, 0, size.height - cornerRadius);
 
-    // Left line
+    // 左の辺
     path.lineTo(0, cornerRadius);
 
-    // Top Left Corner
+    // 左上の角
     path.quadraticBezierTo(0, 0, cornerRadius, 0);
 
     path.close();
@@ -285,6 +282,7 @@ class DashedLinePainter extends CustomPainter {
       ..color = color
       ..strokeWidth = 1;
 
+    // 高さいっぱいになるまで線を引く -> 空ける -> 線を引く を繰り返す
     while (startY < size.height) {
       canvas.drawLine(Offset(0, startY), Offset(0, startY + dashHeight), paint);
       startY += dashHeight + dashSpace;

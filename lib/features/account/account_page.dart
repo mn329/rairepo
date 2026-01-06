@@ -15,14 +15,10 @@ class AccountPage extends StatelessWidget {
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Icons.person_outline, size: 64, color: Colors.white54),
-            const SizedBox(height: 16),
-            Text(
-              'アカウント画面（仮）',
-              style: TextStyle(
-                color: Colors.white.withOpacity(0.5),
-                fontSize: 16,
-              ),
+            CircleAvatar(
+              radius: 50,
+              backgroundImage: NetworkImage('https://via.placeholder.com/150'),
+              child: Icon(Icons.person, color: Colors.white, size: 50),
             ),
           ],
         ),

@@ -12,7 +12,7 @@ class HomeScreen extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final records = ref.watch(recordsProvider);
+    final recordsAsync = ref.watch(recordsProvider);
 
     return DefaultTabController(
       length: 4,
@@ -54,13 +54,24 @@ class HomeScreen extends ConsumerWidget {
             ],
           ),
         ),
-        body: TabBarView(
-          children: [
-            _buildRecordList(context, records, RecordType.live),
-            _buildRecordList(context, records, RecordType.movie),
-            _buildRecordList(context, records, RecordType.book),
-            _buildRecordList(context, records, RecordType.other),
-          ],
+        body: recordsAsync.when(
+          data: (records) => TabBarView(
+            children: [
+              _buildRecordList(context, records, RecordType.live),
+              _buildRecordList(context, records, RecordType.movie),
+              _buildRecordList(context, records, RecordType.book),
+              _buildRecordList(context, records, RecordType.other),
+            ],
+          ),
+          loading: () => const Center(
+            child: CircularProgressIndicator(color: AppColors.gold),
+          ),
+          error: (error, stack) => Center(
+            child: Text(
+              'エラーが発生しました: $error',
+              style: const TextStyle(color: AppColors.textSecondary),
+            ),
+          ),
         ),
       ),
     );
