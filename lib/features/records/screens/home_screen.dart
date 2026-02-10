@@ -1,11 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:recolle/features/records/screens/detail_screen.dart';
+import 'package:recolle/components/record_ticket_card.dart';
+import 'package:recolle/core/theme/app_colors.dart';
+import 'package:recolle/core/utils/error_messages.dart';
 import 'package:recolle/features/records/models/record.dart';
 import 'package:recolle/features/records/providers/records_provider.dart';
-import 'package:recolle/core/theme/app_colors.dart';
 import 'package:recolle/features/records/screens/create_record_screen.dart';
-import 'package:recolle/components/record_ticket_card.dart';
+import 'package:recolle/features/records/screens/detail_screen.dart';
 
 class HomeScreen extends ConsumerWidget {
   const HomeScreen({super.key});
@@ -67,9 +68,13 @@ class HomeScreen extends ConsumerWidget {
             child: CircularProgressIndicator(color: AppColors.gold),
           ),
           error: (error, stack) => Center(
-            child: Text(
-              'エラーが発生しました: $error',
-              style: const TextStyle(color: AppColors.textSecondary),
+            child: Padding(
+              padding: const EdgeInsets.all(24),
+              child: Text(
+                toUserFriendlyMessage(error),
+                textAlign: TextAlign.center,
+                style: const TextStyle(color: AppColors.textSecondary),
+              ),
             ),
           ),
         ),

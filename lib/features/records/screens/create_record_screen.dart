@@ -5,8 +5,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
-import 'package:recolle/features/records/models/record.dart';
 import 'package:recolle/core/theme/app_colors.dart';
+import 'package:recolle/core/utils/error_messages.dart';
+import 'package:recolle/features/records/models/record.dart';
+import 'package:recolle/features/records/providers/records_provider.dart';
+import 'package:recolle/features/records/screens/detail_screen.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class CreateRecordScreen extends HookConsumerWidget {
@@ -58,19 +61,31 @@ class CreateRecordScreen extends HookConsumerWidget {
       isLoading.value = true;
 
       try {
+        final userId = Supabase.instance.client.auth.currentUser?.id;
+        if (userId == null) {
+          if (context.mounted) {
+            ScaffoldMessenger.of(
+              context,
+            ).showSnackBar(const SnackBar(content: Text('ログインしてください')));
+          }
+          isLoading.value = false;
+          return;
+        }
+
         String? imageUrl;
         if (selectedImage.value != null) {
-          final fileName =
+          final baseName =
               '${DateTime.now().millisecondsSinceEpoch}_${selectedImage.value!.path.split('/').last}';
-          debugPrint('Uploading image: $fileName'); // デバッグ出力
+          final storagePath = '$userId/$baseName';
+          debugPrint('Uploading image: $storagePath');
           await Supabase.instance.client.storage
               .from('ticket-images')
-              .upload(fileName, selectedImage.value!);
+              .upload(storagePath, selectedImage.value!);
 
           imageUrl = Supabase.instance.client.storage
               .from('ticket-images')
-              .getPublicUrl(fileName);
-          debugPrint('Image uploaded, URL: $imageUrl'); // デバッグ出力
+              .getPublicUrl(storagePath);
+          debugPrint('Image uploaded, URL: $imageUrl');
         }
 
         final record = Record(
@@ -92,18 +107,21 @@ class CreateRecordScreen extends HookConsumerWidget {
 
         // JSONに変換し、現在のユーザーIDを追加
         final recordData = record.toJson();
-        final userId = Supabase.instance.client.auth.currentUser?.id;
-        if (userId != null) {
-          recordData['user_id'] = userId;
-        }
+        recordData['user_id'] = userId;
 
-        debugPrint('Inserting record: $recordData'); // デバッグ出力
+        debugPrint('Inserting record: $recordData');
 
-        await Supabase.instance.client.from('records').insert(recordData);
+        final inserted = await Supabase.instance.client
+            .from('records')
+            .insert(recordData)
+            .select()
+            .single();
 
-        debugPrint('Record inserted successfully'); // デバッグ出力
+        final newRecord = Record.fromJson(inserted);
+        debugPrint('Record inserted: ${newRecord.id}');
 
         if (context.mounted) {
+          ref.invalidate(recordsProvider);
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
               content: Text('記録を保存しました'),
@@ -111,14 +129,19 @@ class CreateRecordScreen extends HookConsumerWidget {
             ),
           );
           Navigator.of(context).pop();
+          Navigator.of(context).push(
+            MaterialPageRoute<void>(
+              builder: (context) => DetailScreen(record: newRecord),
+            ),
+          );
         }
       } catch (e, stackTrace) {
-        debugPrint('Error saving record: $e'); // エラー内容出力
-        debugPrint('Stack trace: $stackTrace'); // スタックトレース出力
+        debugPrint('Error saving record: $e');
+        debugPrint('Stack trace: $stackTrace');
         if (context.mounted) {
-          ScaffoldMessenger.of(
-            context,
-          ).showSnackBar(SnackBar(content: Text('エラーが発生しました: $e')));
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(toUserFriendlyMessage(e))),
+          );
         }
       } finally {
         isLoading.value = false;
