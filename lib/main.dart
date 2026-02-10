@@ -18,17 +18,6 @@ void main() async {
     anonKey: dotenv.env['SUPABASE_ANON_KEY'] ?? '',
   );
 
-  // 匿名ログイン (セッションがない場合のみ)
-  // 注意: Supabase管理画面の Authentication > Providers で Anonymous Sign-ins を有効にする必要があります
-  final session = Supabase.instance.client.auth.currentSession;
-  if (session == null) {
-    try {
-      await Supabase.instance.client.auth.signInAnonymously();
-    } catch (e) {
-      debugPrint('Auth error: $e');
-    }
-  }
-
   // 1. ProviderScope: Riverpodの状態管理をアプリ全体で使えるようにする
   runApp(const ProviderScope(child: MyApp()));
 }
@@ -41,7 +30,7 @@ class MyApp extends StatelessWidget {
     // 2. MaterialApp.router: GoRouterを使ったナビゲーション機能付きのアプリ定義
     return MaterialApp.router(
       title: 'Live Report',
-      debugShowCheckedModeBanner: false, // 右上の「Debug」帯を消す
+      debugShowCheckedModeBanner: false,
       // 3. テーマ設定: 別ファイルの AppTheme クラスで定義したダークテーマを適用
       theme: AppTheme.darkTheme,
 

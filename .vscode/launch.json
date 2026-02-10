@@ -2,7 +2,7 @@
     "version": "0.2.0",
     "configurations": [
         {
-            // 1. 普段の開発はこれ！ (デバッグモード × 開発用データ)
+            // 1. 普段の開発(デバッグモード × 開発用データ)
             "name": "Recolle (Debug Dev)",
             "request": "launch",
             "type": "dart",
