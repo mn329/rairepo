@@ -28,6 +28,8 @@ class AccountPage extends HookConsumerWidget {
     final isSignup = useState(false);
     final rng = useMemoized(() => Random.secure());
 
+    final isMounted = useIsMounted();
+
     bool looksLikeEmail(String s) {
       final t = s.trim();
       return t.isNotEmpty && t.contains('@') && t.contains('.');
@@ -70,19 +72,21 @@ class AccountPage extends HookConsumerWidget {
       try {
         await fn();
       } on AuthException catch (e) {
-        if (context.mounted) {
+        if (isMounted()) {
           ScaffoldMessenger.of(
             context,
           ).showSnackBar(SnackBar(content: Text(toUserFriendlyMessage(e))));
         }
       } catch (e) {
-        if (context.mounted) {
+        if (isMounted()) {
           ScaffoldMessenger.of(
             context,
           ).showSnackBar(SnackBar(content: Text(toUserFriendlyMessage(e))));
         }
       } finally {
-        isBusy.value = false;
+        if (isMounted()) {
+          isBusy.value = false;
+        }
       }
     }
 
