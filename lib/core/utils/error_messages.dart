@@ -12,6 +12,10 @@ String toUserFriendlyMessage(dynamic error) {
 
   // error が Supabase の認証例外（AuthException）型かどうかを判定する
   if (error is AuthException) {
+    final fromCode = _authMessageFromCode(error.code);
+    if (fromCode != null) {
+      return fromCode;
+    }
     // 認証例外のときは、内部関数を呼んでその戻り値を返す
     return _authMessage(error.message);
   }
@@ -52,8 +56,40 @@ String toUserFriendlyMessage(dynamic error) {
     return '通信がタイムアウトしました。接続を確認して再度お試しください。';
   }
 
+  // Supabase Edge Functions の例外
+  if (error is FunctionException) {
+    return '通信エラーが発生しました (${error.status})。しばらく待ってから再度お試しください。';
+  }
+
   // どのパターンにも当てはまらないときは、汎用メッセージを返す
   return '問題が発生しました。しばらくして再度お試しください。';
+}
+
+/// GoTrue が返す [AuthException.code] を優先して日本語にします。
+/// https://github.com/supabase/auth/blob/master/internal/api/errorcodes.go
+String? _authMessageFromCode(String? code) {
+  if (code == null) return null;
+  switch (code) {
+    case 'over_request_rate_limit':
+      return 'アクセスが集中しています。しばらく待ってから再度お試しください。';
+    case 'user_already_exists':
+    case 'email_exists':
+      return 'このメールアドレスは既にログイン（登録）済みのアカウントです。';
+    case 'weak_password':
+      return 'パスワードが要件を満たしていません。長めのパスワードを試してください。';
+    case 'email_not_confirmed':
+      return 'メールアドレスがまだ確認されていません。確認メールのリンクを開いてください。';
+    case 'signup_disabled':
+      return '新規登録が無効になっています。Supabase の Authentication → Providers を確認してください。';
+    case 'email_provider_disabled':
+      return 'メールでのサインアップが無効です。Supabase の Authentication → Providers で Email を有効にしてください。';
+    case 'hook_timeout':
+    case 'hook_timeout_after_retry':
+    case 'hook_payload_over_size_limit':
+      return '登録処理でサーバー側のフックが失敗しました。Supabase の Auth Hooks / ログを確認してください。';
+    default:
+      return null;
+  }
 }
 
 /// Supabase Auth の英語メッセージを日本語に変換します。
@@ -71,10 +107,15 @@ String _authMessage(String message) {
   if (m.contains('email not confirmed') || m.contains('email_not_confirmed')) {
     return 'メールアドレスがまだ確認されていません。確認メールのリンクを開いてください。';
   }
+  // ユーザーが存在しないことを示す文字列が含まれるか判定する
+  if (m.contains('user not found')) {
+    return 'ユーザーが見つかりません。入力したメールアドレスが正しいか確認してください。';
+  }
   // 既に登録済みを示す文字列が含まれるか判定する
   if (m.contains('user already registered') ||
-      m.contains('already registered')) {
-    return 'このメールアドレスは既に登録されています。ログインしてください。';
+      m.contains('already registered') ||
+      m.contains('already exists')) {
+    return 'このメールアドレスは既にログイン（登録）済みのアカウントです。';
   }
   // パスワード長不足を示す文字列が含まれるか判定する
   if (m.contains('password should be at least')) {
@@ -99,13 +140,6 @@ String _authMessage(String message) {
   if (m.contains('forgot password') || m.contains('reset password')) {
     return 'パスワードリセット用のメールを送信しました。メールをご確認ください。';
   }
-  // メール送信のレート制限
-  // レート制限や「あとで再試行」を示す文字列が含まれるか判定する
-  if (m.contains('rate limit') ||
-      m.contains('60 seconds') ||
-      m.contains('try again later')) {
-    return 'メール送信の制限に達しました。1分ほど待ってから再度お試しください。';
-  }
   // 確認メール・SMTP 未設定（新規登録でよく出る）
   // メール送信失敗（SMTP 等）を示す文字列が含まれるか判定する
   if (m.contains('email provider') ||
@@ -118,6 +152,12 @@ String _authMessage(String message) {
   // 「signup」と「disabled」の両方が含まれるか判定する
   if (m.contains('signup') && m.contains('disabled')) {
     return '新規登録が無効になっています。Supabase の Authentication → Providers → Email で「Enable Sign Up」をオンにしてください。';
+  }
+  // DB 保存失敗（トリガー・RLS 等）
+  if (m.contains('database error') ||
+      m.contains('saving new user') ||
+      m.contains('error saving user')) {
+    return 'ユーザー情報の保存に失敗しました。Supabase の Authentication ログと auth.users まわりのトリガーを確認してください。';
   }
   // 既に日本語のメッセージならそのまま返す
   // ひらがな・カタカナ・漢字などが含まれるか正規表現で判定する（日本語が含まれていれば元の message を返す）

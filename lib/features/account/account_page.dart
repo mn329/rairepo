@@ -1,10 +1,7 @@
-import 'dart:math';
-
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
-import 'package:flutter/services.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:recolle/core/constants/field_limits.dart';
 import 'package:recolle/core/theme/app_colors.dart';
 import 'package:recolle/core/utils/error_messages.dart';
 import 'package:recolle/features/account/providers/auth_providers.dart';
@@ -26,7 +23,6 @@ class AccountPage extends HookConsumerWidget {
 
     final isBusy = useState(false);
     final isSignup = useState(false);
-    final rng = useMemoized(() => Random.secure());
 
     final isMounted = useIsMounted();
 
@@ -72,10 +68,44 @@ class AccountPage extends HookConsumerWidget {
       try {
         await fn();
       } on AuthException catch (e) {
+        debugPrint(
+          'AuthException code=${e.code} statusCode=${e.statusCode} message=${e.message}',
+        );
         if (isMounted()) {
-          ScaffoldMessenger.of(
-            context,
-          ).showSnackBar(SnackBar(content: Text(toUserFriendlyMessage(e))));
+          final messenger = ScaffoldMessenger.of(context);
+          if (e.code == 'email_not_confirmed') {
+            final email = emailController.text.trim();
+            messenger.showSnackBar(
+              SnackBar(
+                content: Text(toUserFriendlyMessage(e)),
+                action: SnackBarAction(
+                  label: '再送する',
+                  onPressed: () async {
+                    try {
+                      await authService.resendSignupConfirmationEmail(
+                        email: email,
+                      );
+                      if (isMounted()) {
+                        messenger.showSnackBar(
+                          const SnackBar(content: Text('確認メールを再送しました')),
+                        );
+                      }
+                    } catch (err) {
+                      if (isMounted()) {
+                        messenger.showSnackBar(
+                          SnackBar(content: Text(toUserFriendlyMessage(err))),
+                        );
+                      }
+                    }
+                  },
+                ),
+              ),
+            );
+          } else {
+            messenger.showSnackBar(
+              SnackBar(content: Text(toUserFriendlyMessage(e))),
+            );
+          }
         }
       } catch (e) {
         if (isMounted()) {
@@ -88,41 +118,6 @@ class AccountPage extends HookConsumerWidget {
           isBusy.value = false;
         }
       }
-    }
-
-    String generateTestEmail() {
-      final ts = DateTime.now().millisecondsSinceEpoch;
-      // 使い捨て前提のため example.com を利用（開発用）
-      return 'test+$ts@example.com';
-    }
-
-    String generateTestPassword() {
-      // Supabase 側の最小要件（6文字以上）を満たしつつ、毎回変わるようにする
-      final n = rng.nextInt(900000) + 100000; // 6桁
-      return 'Test$n!';
-    }
-
-    Future<void> showCredentialsDialog({
-      required String email,
-      required String password,
-      required bool copied,
-    }) async {
-      await showDialog<void>(
-        context: context,
-        builder: (context) => AlertDialog(
-          title: const Text('テスト用アカウントを作成しました'),
-          content: SelectableText(
-            'メール: $email\nパスワード: $password'
-            '${copied ? '\n\n（クリップボードにコピーしました）' : ''}',
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('閉じる'),
-            ),
-          ],
-        ),
-      );
     }
 
     return Scaffold(
@@ -141,16 +136,20 @@ class AccountPage extends HookConsumerWidget {
         ),
         data: (user) {
           final email = user?.email;
-          final userId = user?.id;
+          final isAnonymous = user?.isAnonymous ?? false;
 
           return ListView(
             padding: const EdgeInsets.all(16),
             children: [
               _ProfileCard(
-                title: email ?? '未ログイン',
-                subtitle: email == null ? 'ログインして利用を開始' : 'ログイン中',
-                userId: userId,
-                isAnonymous: user?.isAnonymous ?? false,
+                title: user == null
+                    ? '未ログイン'
+                    : (email != null && email.isNotEmpty
+                          ? email
+                          : (isAnonymous ? '匿名ユーザー' : 'アカウント')),
+                subtitle: user == null
+                    ? 'ログインして利用を開始'
+                    : (isAnonymous ? '匿名でログイン中' : 'ログイン中'),
               ),
               const SizedBox(height: 16),
               if (user == null)
@@ -163,6 +162,7 @@ class AccountPage extends HookConsumerWidget {
                         controller: emailController,
                         keyboardType: TextInputType.emailAddress,
                         autocorrect: false,
+                        maxLength: AccountFieldLimits.email,
                         decoration: const InputDecoration(
                           labelText: 'メールアドレス',
 
@@ -174,6 +174,7 @@ class AccountPage extends HookConsumerWidget {
                       TextField(
                         controller: passwordController,
                         obscureText: true,
+                        maxLength: AccountFieldLimits.password,
                         decoration: InputDecoration(
                           labelText: 'パスワード',
                           hintText: isSignup.value ? '6文字以上' : null,
@@ -185,6 +186,7 @@ class AccountPage extends HookConsumerWidget {
                         TextField(
                           controller: passwordConfirmController,
                           obscureText: true,
+                          maxLength: AccountFieldLimits.password,
                           decoration: const InputDecoration(
                             labelText: 'パスワード（確認）',
                             helperText: '上記と同じパスワードを再入力',
@@ -201,6 +203,7 @@ class AccountPage extends HookConsumerWidget {
                                 : () => _showForgotPasswordDialog(
                                     context,
                                     authService,
+                                    emailController.text,
                                     runGuarded,
                                   ),
                             child: Text(
@@ -219,6 +222,11 @@ class AccountPage extends HookConsumerWidget {
                             ? null
                             : () {
                                 runGuarded(() async {
+                                  if (user != null && !user.isAnonymous) {
+                                    throw const AuthException(
+                                      '既にログイン（登録）済みのアカウントです。',
+                                    );
+                                  }
                                   final e = emailController.text.trim();
                                   if (!looksLikeEmail(e)) {
                                     throw const AuthException(
@@ -246,15 +254,77 @@ class AccountPage extends HookConsumerWidget {
                                     FocusScope.of(context).unfocus();
                                     final needsConfirm =
                                         authService.currentSession == null;
-                                    ScaffoldMessenger.of(context).showSnackBar(
-                                      SnackBar(
-                                        content: Text(
-                                          needsConfirm
-                                              ? '登録しました。確認メールを送りました。リンクから認証してください。'
-                                              : '登録しました',
+                                    if (needsConfirm) {
+                                      await showDialog<void>(
+                                        context: context,
+                                        builder: (ctx) => AlertDialog(
+                                          title: const Text('確認メールを送信しました'),
+                                          content: SingleChildScrollView(
+                                            child: Text(
+                                              '「$e」宛に確認メールを送りました。\n\n'
+                                              'メール内のリンクを開いて認証したあと、'
+                                              '「ログインはこちら」から同じメールとパスワードでログインしてください。\n\n'
+                                              '※ 認証が完了するまでホーム画面には進めません。',
+                                            ),
+                                          ),
+                                          actions: [
+                                            TextButton(
+                                              onPressed: () async {
+                                                try {
+                                                  await authService
+                                                      .resendSignupConfirmationEmail(
+                                                        email: e,
+                                                      );
+                                                  if (!ctx.mounted) {
+                                                    return;
+                                                  }
+                                                  Navigator.of(ctx).pop();
+                                                  if (!context.mounted) {
+                                                    return;
+                                                  }
+                                                  ScaffoldMessenger.of(
+                                                    context,
+                                                  ).showSnackBar(
+                                                    const SnackBar(
+                                                      content: Text(
+                                                        '確認メールを再送しました',
+                                                      ),
+                                                    ),
+                                                  );
+                                                } catch (err) {
+                                                  if (!ctx.mounted) {
+                                                    return;
+                                                  }
+                                                  ScaffoldMessenger.of(
+                                                    ctx,
+                                                  ).showSnackBar(
+                                                    SnackBar(
+                                                      content: Text(
+                                                        toUserFriendlyMessage(
+                                                          err,
+                                                        ),
+                                                      ),
+                                                    ),
+                                                  );
+                                                }
+                                              },
+                                              child: const Text('確認メールを再送'),
+                                            ),
+                                            FilledButton(
+                                              onPressed: () =>
+                                                  Navigator.of(ctx).pop(),
+                                              child: const Text('閉じる'),
+                                            ),
+                                          ],
                                         ),
-                                      ),
-                                    );
+                                      );
+                                    } else {
+                                      ScaffoldMessenger.of(
+                                        context,
+                                      ).showSnackBar(
+                                        const SnackBar(content: Text('登録しました')),
+                                      );
+                                    }
                                   } else {
                                     await authService.signInWithPassword(
                                       email: e,
@@ -315,87 +385,6 @@ class AccountPage extends HookConsumerWidget {
                     child: const Text('ログアウト'),
                   ),
                 ),
-              if (kDebugMode && user == null) ...[
-                const SizedBox(height: 16),
-                _ExpandableSection(
-                  title: '開発用（デバッグ）',
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      FilledButton.tonal(
-                        onPressed: isBusy.value
-                            ? null
-                            : () {
-                                runGuarded(() async {
-                                  await authService.signInAnonymously();
-                                  if (!context.mounted) return;
-                                  ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(
-                                      content: Text('匿名でログインしました（テスト）'),
-                                    ),
-                                  );
-                                });
-                              },
-                        child: const Text('匿名でログイン（テスト）'),
-                      ),
-                      const SizedBox(height: 8),
-                      FilledButton(
-                        onPressed: isBusy.value
-                            ? null
-                            : () {
-                                runGuarded(() async {
-                                  final testEmail = generateTestEmail();
-                                  final testPassword = generateTestPassword();
-
-                                  await authService.signUpWithPassword(
-                                    email: testEmail,
-                                    password: testPassword,
-                                  );
-
-                                  // プロジェクト設定で確認メール必須の場合は signUp 直後にセッションが張られないことがあるため、
-                                  // セッションが無い場合のみサインインを試みる。
-                                  if (authService.currentSession == null) {
-                                    await authService.signInWithPassword(
-                                      email: testEmail,
-                                      password: testPassword,
-                                    );
-                                  }
-
-                                  var copied = false;
-                                  try {
-                                    await Clipboard.setData(
-                                      ClipboardData(
-                                        text:
-                                            'メール: $testEmail\nパスワード: $testPassword',
-                                      ),
-                                    );
-                                    copied = true;
-                                  } catch (_) {
-                                    copied = false;
-                                  }
-
-                                  if (!context.mounted) return;
-                                  await showCredentialsDialog(
-                                    email: testEmail,
-                                    password: testPassword,
-                                    copied: copied,
-                                  );
-                                });
-                              },
-                        child: const Text('テスト用アカウントを作成（自動）'),
-                      ),
-                      const SizedBox(height: 8),
-                      Text(
-                        '注意: Supabase側で確認メールが必須だと、作成後すぐにログインできない場合があります。',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: AppColors.textPrimary.withAlpha(166),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
             ],
           );
         },
@@ -439,17 +428,10 @@ class _ExpandableSection extends StatelessWidget {
 }
 
 class _ProfileCard extends StatelessWidget {
-  const _ProfileCard({
-    required this.title,
-    required this.subtitle,
-    required this.userId,
-    required this.isAnonymous,
-  });
+  const _ProfileCard({required this.title, required this.subtitle});
 
   final String title;
   final String subtitle;
-  final String? userId;
-  final bool isAnonymous;
 
   @override
   Widget build(BuildContext context) {
@@ -488,16 +470,6 @@ class _ProfileCard extends StatelessWidget {
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(color: AppColors.textPrimary.withAlpha(166)),
                 ),
-                if (userId != null) ...[
-                  const SizedBox(height: 6),
-                  Text(
-                    'uid: ${_shortId(userId!)}${isAnonymous ? '（匿名）' : ''}',
-                    style: TextStyle(
-                      color: AppColors.textPrimary.withAlpha(128),
-                      fontSize: 12,
-                    ),
-                  ),
-                ],
               ],
             ),
           ),
@@ -507,18 +479,14 @@ class _ProfileCard extends StatelessWidget {
   }
 }
 
-String _shortId(String id) {
-  if (id.length <= 10) return id;
-  return '${id.substring(0, 6)}...${id.substring(id.length - 4)}';
-}
-
 /// パスワードリセット用メール送信ダイアログを表示する。
 void _showForgotPasswordDialog(
   BuildContext context,
   AuthService authService,
+  String initialEmail,
   Future<void> Function(Future<void> Function() fn) runGuarded,
 ) {
-  final controller = TextEditingController();
+  final controller = TextEditingController(text: initialEmail);
   showDialog<void>(
     context: context,
     builder: (ctx) => AlertDialog(
@@ -527,6 +495,7 @@ void _showForgotPasswordDialog(
         controller: controller,
         keyboardType: TextInputType.emailAddress,
         autocorrect: false,
+        maxLength: AccountFieldLimits.email,
         decoration: const InputDecoration(labelText: '登録したメールアドレス'),
       ),
       actions: [

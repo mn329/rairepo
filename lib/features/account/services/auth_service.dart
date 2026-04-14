@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class AuthService {
@@ -31,7 +32,11 @@ class AuthService {
     required String email,
     required String password,
   }) async {
-    await _client.auth.signUp(email: email.trim(), password: password);
+    await _client.auth.signUp(
+      email: email.trim(),
+      password: password,
+      emailRedirectTo: kIsWeb ? Uri.base.origin : 'io.supabase.recolle://login-callback/',
+    );
   }
 
   /// 匿名ログインします（開発中の動作確認などに利用）。
@@ -45,12 +50,19 @@ class AuthService {
   ///
   /// 注意: Supabase 側で Email Provider が有効でないと失敗します。
   Future<void> requestPasswordResetEmail({required String email}) async {
-    await _client.auth.resetPasswordForEmail(email.trim());
+    await _client.auth.resetPasswordForEmail(
+      email.trim(),
+      redirectTo: kIsWeb ? Uri.base.origin : 'io.supabase.recolle://login-callback/',
+    );
   }
 
   /// 確認メール（サインアップ/メール変更時など）の再送。
   Future<void> resendSignupConfirmationEmail({required String email}) async {
-    await _client.auth.resend(type: OtpType.signup, email: email.trim());
+    await _client.auth.resend(
+      type: OtpType.signup,
+      email: email.trim(),
+      emailRedirectTo: kIsWeb ? Uri.base.origin : 'io.supabase.recolle://login-callback/',
+    );
   }
 
   /// メールアドレスを変更します（通常は確認メールが送られます）。
@@ -81,7 +93,7 @@ class AuthService {
       throw const AuthException('ユーザーが存在しません。');
     }
     if (!user.isAnonymous) {
-      throw const AuthException('匿名ユーザーではありません。');
+      throw const AuthException('既にログイン（登録）済みのアカウントです。');
     }
 
     final data = <String, dynamic>{};
