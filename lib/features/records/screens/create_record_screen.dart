@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:recolle/core/constants/field_limits.dart';
 import 'package:recolle/core/theme/app_colors.dart';
 import 'package:recolle/core/utils/error_messages.dart';
 import 'package:recolle/features/records/models/record.dart';
@@ -39,6 +40,34 @@ class CreateRecordScreen extends HookConsumerWidget {
       return '${d.year}年${d.month.toString().padLeft(2, '0')}月${d.day.toString().padLeft(2, '0')}日 ($w)';
     }
 
+    void tryAddSongToSetlist() {
+      final line = currentSongController.text.trim();
+      if (line.isEmpty) return;
+      if (line.length > RecordFieldLimits.setlistSongLine) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              '曲名は最大${RecordFieldLimits.setlistSongLine}文字までです。',
+            ),
+          ),
+        );
+        return;
+      }
+      final candidate = [...setlist.value, line].join('\n');
+      if (candidate.length > RecordFieldLimits.setlistTotal) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'セットリスト全体は最大${RecordFieldLimits.setlistTotal}文字までです。',
+            ),
+          ),
+        );
+        return;
+      }
+      setlist.value = [...setlist.value, line];
+      currentSongController.clear();
+    }
+
     Future<void> pickImage() async {
       final picker = ImagePicker();
       final pickedFile = await picker.pickImage(source: ImageSource.gallery);
@@ -51,10 +80,56 @@ class CreateRecordScreen extends HookConsumerWidget {
     Future<void> saveRecord() async {
       if (isLoading.value) return;
 
-      if (titleController.text.isEmpty || artistController.text.isEmpty) {
+      final title = titleController.text.trim();
+      final artist = artistController.text.trim();
+      if (title.isEmpty || artist.isEmpty) {
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(const SnackBar(content: Text('タイトルとアーティスト名は必須です')));
+        return;
+      }
+
+      if (title.length > RecordFieldLimits.title ||
+          artist.length > RecordFieldLimits.artistOrAuthor) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('タイトルまたはアーティスト名が文字数上限を超えています。')),
+        );
+        return;
+      }
+
+      final sourceTrimmed = sourceController.text.trim();
+      if (sourceTrimmed.length > RecordFieldLimits.ticketSource) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              '取得元は最大${RecordFieldLimits.ticketSource}文字までです。',
+            ),
+          ),
+        );
+        return;
+      }
+
+      final setlistJoined =
+          setlist.value.isEmpty ? null : setlist.value.join('\n');
+      if (setlistJoined != null &&
+          setlistJoined.length > RecordFieldLimits.setlistTotal) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'セットリスト全体は最大${RecordFieldLimits.setlistTotal}文字までです。',
+            ),
+          ),
+        );
+        return;
+      }
+
+      final mcTrimmed = mcMemoController.text.trim();
+      final impressionsTrimmed = impressionsController.text.trim();
+      if (mcTrimmed.length > RecordFieldLimits.mcMemo ||
+          impressionsTrimmed.length > RecordFieldLimits.impressions) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('MCメモまたは感想が文字数上限を超えています。')),
+        );
         return;
       }
 
@@ -91,18 +166,16 @@ class CreateRecordScreen extends HookConsumerWidget {
         final record = Record(
           id: '', // DB側で生成されるため空文字
           type: selectedType.value,
-          title: titleController.text,
-          artistOrAuthor: artistController.text,
+          title: title,
+          artistOrAuthor: artist,
           date: date.value,
           ticketImageUrl: imageUrl ?? '',
-          ticketSource: sourceController.text.isEmpty
+          ticketSource: sourceTrimmed.isEmpty ? null : sourceTrimmed,
+          setlist: setlistJoined == null || setlistJoined.isEmpty
               ? null
-              : sourceController.text,
-          setlist: setlist.value.isEmpty ? null : setlist.value.join('\n'),
-          mcMemo: mcMemoController.text.isEmpty ? null : mcMemoController.text,
-          impressions: impressionsController.text.isEmpty
-              ? null
-              : impressionsController.text,
+              : setlistJoined,
+          mcMemo: mcTrimmed.isEmpty ? null : mcTrimmed,
+          impressions: impressionsTrimmed.isEmpty ? null : impressionsTrimmed,
         );
 
         // JSONに変換し、現在のユーザーIDを追加
@@ -288,12 +361,14 @@ class CreateRecordScreen extends HookConsumerWidget {
               controller: titleController,
               label: 'タイトル',
               icon: Icons.title,
+              maxLength: RecordFieldLimits.title,
             ),
             const SizedBox(height: 16),
             _buildTextField(
               controller: artistController,
               label: 'アーティスト / 作者',
               icon: Icons.person_outline,
+              maxLength: RecordFieldLimits.artistOrAuthor,
             ),
             const SizedBox(height: 16),
 
@@ -393,6 +468,7 @@ class CreateRecordScreen extends HookConsumerWidget {
               controller: sourceController,
               label: '取得元 (e+, Amazon等)',
               icon: Icons.confirmation_number_outlined,
+              maxLength: RecordFieldLimits.ticketSource,
             ),
 
             const SizedBox(height: 32),
@@ -486,6 +562,7 @@ class CreateRecordScreen extends HookConsumerWidget {
                   Expanded(
                     child: TextField(
                       controller: currentSongController,
+                      maxLength: RecordFieldLimits.setlistSongLine,
                       style: const TextStyle(color: AppColors.textPrimary),
                       decoration: InputDecoration(
                         hintText: '曲名を入力',
@@ -515,25 +592,12 @@ class CreateRecordScreen extends HookConsumerWidget {
                           borderSide: const BorderSide(color: AppColors.gold),
                         ),
                       ),
-                      onSubmitted: (value) {
-                        if (value.isNotEmpty) {
-                          setlist.value = [...setlist.value, value];
-                          currentSongController.clear();
-                        }
-                      },
+                      onSubmitted: (_) => tryAddSongToSetlist(),
                     ),
                   ),
                   const SizedBox(width: 8),
                   IconButton(
-                    onPressed: () {
-                      if (currentSongController.text.isNotEmpty) {
-                        setlist.value = [
-                          ...setlist.value,
-                          currentSongController.text,
-                        ];
-                        currentSongController.clear();
-                      }
-                    },
+                    onPressed: tryAddSongToSetlist,
                     style: IconButton.styleFrom(
                       backgroundColor: AppColors.gold,
                       foregroundColor: Colors.black,
@@ -549,6 +613,7 @@ class CreateRecordScreen extends HookConsumerWidget {
                 label: 'MCメモ',
                 icon: Icons.mic_none,
                 maxLines: 3,
+                maxLength: RecordFieldLimits.mcMemo,
               ),
               const SizedBox(height: 16),
             ],
@@ -558,6 +623,7 @@ class CreateRecordScreen extends HookConsumerWidget {
               label: '感想',
               icon: Icons.edit_note,
               maxLines: 5,
+              maxLength: RecordFieldLimits.impressions,
             ),
 
             const SizedBox(height: 40),
@@ -585,10 +651,12 @@ class CreateRecordScreen extends HookConsumerWidget {
     required String label,
     required IconData icon,
     int maxLines = 1,
+    int? maxLength,
   }) {
     return TextField(
       controller: controller,
       maxLines: maxLines,
+      maxLength: maxLength,
       style: const TextStyle(color: AppColors.textPrimary),
       cursorColor: AppColors.gold,
       decoration: InputDecoration(
