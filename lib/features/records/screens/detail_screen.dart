@@ -41,7 +41,7 @@ class DetailScreen extends ConsumerWidget {
               decoration: BoxDecoration(
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.5),
+                    color: Colors.black.withValues(alpha: 0.5),
                     blurRadius: 20,
                     offset: const Offset(0, 10),
                   ),
@@ -73,7 +73,7 @@ class DetailScreen extends ConsumerWidget {
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(16),
                   side: BorderSide(
-                    color: AppColors.gold.withOpacity(0.2),
+                    color: AppColors.gold.withValues(alpha: 0.2),
                     width: 1,
                   ),
                 ),

@@ -24,8 +24,6 @@ class AccountPage extends HookConsumerWidget {
     final isBusy = useState(false);
     final isSignup = useState(false);
 
-    final isMounted = useIsMounted();
-
     bool looksLikeEmail(String s) {
       final t = s.trim();
       return t.isNotEmpty && t.contains('@') && t.contains('.');
@@ -71,50 +69,48 @@ class AccountPage extends HookConsumerWidget {
         debugPrint(
           'AuthException code=${e.code} statusCode=${e.statusCode} message=${e.message}',
         );
-        if (isMounted()) {
-          final messenger = ScaffoldMessenger.of(context);
-          if (e.code == 'email_not_confirmed') {
-            final email = emailController.text.trim();
-            messenger.showSnackBar(
-              SnackBar(
-                content: Text(toUserFriendlyMessage(e)),
-                action: SnackBarAction(
-                  label: '再送する',
-                  onPressed: () async {
-                    try {
-                      await authService.resendSignupConfirmationEmail(
-                        email: email,
+        if (!context.mounted) return;
+        final messenger = ScaffoldMessenger.of(context);
+        if (e.code == 'email_not_confirmed') {
+          final email = emailController.text.trim();
+          messenger.showSnackBar(
+            SnackBar(
+              content: Text(toUserFriendlyMessage(e)),
+              action: SnackBarAction(
+                label: '再送する',
+                onPressed: () async {
+                  try {
+                    await authService.resendSignupConfirmationEmail(
+                      email: email,
+                    );
+                    if (context.mounted) {
+                      messenger.showSnackBar(
+                        const SnackBar(content: Text('確認メールを再送しました')),
                       );
-                      if (isMounted()) {
-                        messenger.showSnackBar(
-                          const SnackBar(content: Text('確認メールを再送しました')),
-                        );
-                      }
-                    } catch (err) {
-                      if (isMounted()) {
-                        messenger.showSnackBar(
-                          SnackBar(content: Text(toUserFriendlyMessage(err))),
-                        );
-                      }
                     }
-                  },
-                ),
+                  } catch (err) {
+                    if (context.mounted) {
+                      messenger.showSnackBar(
+                        SnackBar(content: Text(toUserFriendlyMessage(err))),
+                      );
+                    }
+                  }
+                },
               ),
-            );
-          } else {
-            messenger.showSnackBar(
-              SnackBar(content: Text(toUserFriendlyMessage(e))),
-            );
-          }
+            ),
+          );
+        } else {
+          messenger.showSnackBar(
+            SnackBar(content: Text(toUserFriendlyMessage(e))),
+          );
         }
       } catch (e) {
-        if (isMounted()) {
-          ScaffoldMessenger.of(
-            context,
-          ).showSnackBar(SnackBar(content: Text(toUserFriendlyMessage(e))));
-        }
+        if (!context.mounted) return;
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(toUserFriendlyMessage(e))),
+        );
       } finally {
-        if (isMounted()) {
+        if (context.mounted) {
           isBusy.value = false;
         }
       }

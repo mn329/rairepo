@@ -32,7 +32,7 @@ class AppTheme {
       // Navigation Bar Theme
       navigationBarTheme: NavigationBarThemeData(
         backgroundColor: AppColors.surface,
-        indicatorColor: AppColors.gold.withOpacity(0.15),
+        indicatorColor: AppColors.gold.withValues(alpha: 0.15),
         surfaceTintColor: Colors.transparent,
         labelTextStyle: WidgetStateProperty.resolveWith((states) {
           if (states.contains(WidgetState.selected)) {
@@ -43,7 +43,7 @@ class AppTheme {
             );
           }
           return TextStyle(
-            color: AppColors.textPrimary.withOpacity(0.5),
+            color: AppColors.textPrimary.withValues(alpha: 0.5),
             fontSize: 12,
           );
         }),
@@ -51,7 +51,7 @@ class AppTheme {
           if (states.contains(WidgetState.selected)) {
             return const IconThemeData(color: AppColors.gold);
           }
-          return IconThemeData(color: AppColors.textPrimary.withOpacity(0.5));
+          return IconThemeData(color: AppColors.textPrimary.withValues(alpha: 0.5));
         }),
       ),
 

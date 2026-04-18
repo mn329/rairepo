@@ -67,7 +67,7 @@ class _RecordTicketCardState extends State<RecordTicketCard>
             color: Colors.transparent,
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.5),
+                color: Colors.black.withValues(alpha: 0.5),
                 blurRadius: 15,
                 offset: const Offset(0, 8),
               ),
@@ -94,9 +94,9 @@ class _RecordTicketCardState extends State<RecordTicketCard>
                     decoration: BoxDecoration(
                       gradient: LinearGradient(
                         colors: [
-                          Colors.black.withOpacity(0.9), // Left (Text side)
-                          Colors.black.withOpacity(0.6), // Center
-                          Colors.black.withOpacity(0.4), // Right
+                          Colors.black.withValues(alpha: 0.9), // Left (Text side)
+                          Colors.black.withValues(alpha: 0.6), // Center
+                          Colors.black.withValues(alpha: 0.4), // Right
                         ],
                         begin: Alignment.centerLeft,
                         end: Alignment.centerRight,
@@ -166,7 +166,7 @@ class _RecordTicketCardState extends State<RecordTicketCard>
                           margin: const EdgeInsets.symmetric(horizontal: 16),
                           child: CustomPaint(
                             painter: DashedLinePainter(
-                              color: Colors.white.withOpacity(0.3),
+                              color: Colors.white.withValues(alpha: 0.3),
                             ),
                           ),
                         ),
@@ -179,7 +179,7 @@ class _RecordTicketCardState extends State<RecordTicketCard>
                             Text(
                               widget.record.date.year.toString(),
                               style: TextStyle(
-                                color: AppColors.gold.withOpacity(0.8),
+                                color: AppColors.gold.withValues(alpha: 0.8),
                                 fontSize: 12,
                                 fontWeight: FontWeight.bold,
                               ),

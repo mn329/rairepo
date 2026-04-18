@@ -318,7 +318,7 @@ class CreateRecordScreen extends HookConsumerWidget {
                 color: AppColors.surface,
                 borderRadius: BorderRadius.circular(16),
                 border: Border.all(
-                  color: AppColors.textDisabled.withOpacity(0.3),
+                  color: AppColors.textDisabled.withValues(alpha: 0.3),
                 ),
               ),
               child: InkWell(
@@ -340,13 +340,13 @@ class CreateRecordScreen extends HookConsumerWidget {
                           Icon(
                             Icons.add_photo_alternate_outlined,
                             size: 48,
-                            color: AppColors.gold.withOpacity(0.5),
+                            color: AppColors.gold.withValues(alpha: 0.5),
                           ),
                           const SizedBox(height: 12),
                           Text(
                             'チケット画像を追加',
                             style: TextStyle(
-                              color: AppColors.textSecondary.withOpacity(0.7),
+                              color: AppColors.textSecondary.withValues(alpha: 0.7),
                             ),
                           ),
                         ],
@@ -391,8 +391,8 @@ class CreateRecordScreen extends HookConsumerWidget {
                               color: AppColors.surface,
                               border: Border(
                                 bottom: BorderSide(
-                                  color: AppColors.textDisabled.withOpacity(
-                                    0.2,
+                                  color: AppColors.textDisabled.withValues(
+                                    alpha: 0.2,
                                   ),
                                 ),
                               ),
@@ -438,7 +438,7 @@ class CreateRecordScreen extends HookConsumerWidget {
                   color: AppColors.surface,
                   borderRadius: BorderRadius.circular(12),
                   border: Border.all(
-                    color: AppColors.textDisabled.withOpacity(0.3),
+                    color: AppColors.textDisabled.withValues(alpha: 0.3),
                   ),
                 ),
                 child: Row(
@@ -508,7 +508,7 @@ class CreateRecordScreen extends HookConsumerWidget {
                     color: AppColors.surface,
                     borderRadius: BorderRadius.circular(12),
                     border: Border.all(
-                      color: AppColors.textDisabled.withOpacity(0.3),
+                      color: AppColors.textDisabled.withValues(alpha: 0.3),
                     ),
                   ),
                   child: Column(
@@ -548,7 +548,7 @@ class CreateRecordScreen extends HookConsumerWidget {
                           if (index != setlist.value.length - 1)
                             Divider(
                               height: 1,
-                              color: AppColors.textDisabled.withOpacity(0.2),
+                              color: AppColors.textDisabled.withValues(alpha: 0.2),
                             ),
                         ],
                       );
@@ -567,7 +567,7 @@ class CreateRecordScreen extends HookConsumerWidget {
                       decoration: InputDecoration(
                         hintText: '曲名を入力',
                         hintStyle: TextStyle(
-                          color: AppColors.textSecondary.withOpacity(0.5),
+                          color: AppColors.textSecondary.withValues(alpha: 0.5),
                         ),
                         filled: true,
                         fillColor: AppColors.surface,
@@ -578,13 +578,13 @@ class CreateRecordScreen extends HookConsumerWidget {
                         border: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
                           borderSide: BorderSide(
-                            color: AppColors.textDisabled.withOpacity(0.3),
+                            color: AppColors.textDisabled.withValues(alpha: 0.3),
                           ),
                         ),
                         enabledBorder: OutlineInputBorder(
                           borderRadius: BorderRadius.circular(12),
                           borderSide: BorderSide(
-                            color: AppColors.textDisabled.withOpacity(0.3),
+                            color: AppColors.textDisabled.withValues(alpha: 0.3),
                           ),
                         ),
                         focusedBorder: OutlineInputBorder(
@@ -661,10 +661,10 @@ class CreateRecordScreen extends HookConsumerWidget {
       cursorColor: AppColors.gold,
       decoration: InputDecoration(
         labelText: label,
-        labelStyle: TextStyle(color: AppColors.textSecondary.withOpacity(0.7)),
+        labelStyle: TextStyle(color: AppColors.textSecondary.withValues(alpha: 0.7)),
         prefixIcon: Icon(
           icon,
-          color: AppColors.gold.withOpacity(0.7),
+          color: AppColors.gold.withValues(alpha: 0.7),
           size: 20,
         ),
         filled: true,
@@ -672,7 +672,7 @@ class CreateRecordScreen extends HookConsumerWidget {
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(12),
           borderSide: BorderSide(
-            color: AppColors.textDisabled.withOpacity(0.3),
+            color: AppColors.textDisabled.withValues(alpha: 0.3),
           ),
         ),
         focusedBorder: OutlineInputBorder(
