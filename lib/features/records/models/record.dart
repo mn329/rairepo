@@ -1,5 +1,21 @@
 enum RecordType { live, movie, book, other }
 
+extension RecordTypeUi on RecordType {
+  /// タブやチップなどに表示する日本語ラベル。
+  String get japaneseLabel {
+    switch (this) {
+      case RecordType.live:
+        return 'ライブ';
+      case RecordType.movie:
+        return '映画';
+      case RecordType.book:
+        return '本';
+      case RecordType.other:
+        return 'その他';
+    }
+  }
+}
+
 class Record {
   final String id;
   final RecordType type;
@@ -25,18 +41,7 @@ class Record {
     this.impressions,
   });
 
-  String get typeLabel {
-    switch (type) {
-      case RecordType.live:
-        return 'ライブ';
-      case RecordType.movie:
-        return '映画';
-      case RecordType.book:
-        return '本';
-      case RecordType.other:
-        return 'その他';
-    }
-  }
+  String get typeLabel => type.japaneseLabel;
 
   factory Record.fromJson(Map<String, dynamic> json) {
     return Record(
