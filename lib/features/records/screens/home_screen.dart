@@ -42,17 +42,14 @@ class HomeScreen extends ConsumerWidget {
               },
             ),
           ],
-          bottom: const TabBar(
+          bottom: TabBar(
             isScrollable: false,
             indicatorColor: AppColors.gold,
             labelColor: AppColors.gold,
             unselectedLabelColor: AppColors.textSecondary,
-            tabs: [
-              Tab(text: 'ライブ'),
-              Tab(text: '映画'),
-              Tab(text: '本'),
-              Tab(text: 'その他'),
-            ],
+            tabs: RecordType.values
+                .map((t) => Tab(text: t.japaneseLabel))
+                .toList(),
           ),
         ),
         body: recordsAsync.when(

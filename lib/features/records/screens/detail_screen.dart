@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:recolle/core/theme/app_colors.dart';
 import 'package:recolle/core/utils/error_messages.dart';
+import 'package:recolle/core/utils/japanese_date_format.dart';
 import 'package:recolle/features/records/models/record.dart';
 import 'package:recolle/features/records/providers/records_provider.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
 
 class DetailScreen extends ConsumerWidget {
   const DetailScreen({super.key, required this.record});
@@ -117,7 +117,7 @@ class DetailScreen extends ConsumerWidget {
                               ),
                               const SizedBox(width: 8),
                               Text(
-                                _formatDate(record.date),
+                                formatJapaneseDate(record.date),
                                 style: const TextStyle(
                                   color: AppColors.textSecondary,
                                   fontSize: 14,
@@ -254,10 +254,6 @@ class DetailScreen extends ConsumerWidget {
     );
   }
 
-  String _formatDate(DateTime date) {
-    return '${date.year}年${date.month}月${date.day}日';
-  }
-
   Future<void> _confirmAndDelete(BuildContext context, WidgetRef ref) async {
     final ok = await showDialog<bool>(
       context: context,
@@ -283,10 +279,7 @@ class DetailScreen extends ConsumerWidget {
     if (ok != true || !context.mounted) return;
 
     try {
-      await Supabase.instance.client
-          .from('records')
-          .delete()
-          .eq('id', record.id);
+      await ref.read(recordsRepositoryProvider).deleteRecord(record.id);
 
       if (!context.mounted) return;
       ref.invalidate(recordsProvider);

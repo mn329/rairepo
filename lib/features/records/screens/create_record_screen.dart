@@ -1,6 +1,5 @@
 import 'dart:io';
 
-import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
@@ -8,9 +7,12 @@ import 'package:image_picker/image_picker.dart';
 import 'package:recolle/core/constants/field_limits.dart';
 import 'package:recolle/core/theme/app_colors.dart';
 import 'package:recolle/core/utils/error_messages.dart';
+import 'package:recolle/core/utils/japanese_date_format.dart';
 import 'package:recolle/features/records/models/record.dart';
 import 'package:recolle/features/records/providers/records_provider.dart';
 import 'package:recolle/features/records/screens/detail_screen.dart';
+import 'package:recolle/features/records/widgets/number_date_picker_sheet.dart';
+import 'package:recolle/features/records/widgets/record_form_text_field.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class CreateRecordScreen extends HookConsumerWidget {
@@ -32,13 +34,6 @@ class CreateRecordScreen extends HookConsumerWidget {
     final currentSongController = useTextEditingController();
     final mcMemoController = useTextEditingController();
     final impressionsController = useTextEditingController();
-
-    // Helper for date formatting
-    String formatDate(DateTime d) {
-      const weekDays = ['月', '火', '水', '木', '金', '土', '日'];
-      final w = weekDays[d.weekday - 1];
-      return '${d.year}年${d.month.toString().padLeft(2, '0')}月${d.day.toString().padLeft(2, '0')}日 ($w)';
-    }
 
     void tryAddSongToSetlist() {
       final line = currentSongController.text.trim();
@@ -147,19 +142,15 @@ class CreateRecordScreen extends HookConsumerWidget {
           return;
         }
 
+        final repo = ref.read(recordsRepositoryProvider);
+
         String? imageUrl;
         if (selectedImage.value != null) {
-          final baseName =
-              '${DateTime.now().millisecondsSinceEpoch}_${selectedImage.value!.path.split('/').last}';
-          final storagePath = '$userId/$baseName';
-          debugPrint('Uploading image: $storagePath');
-          await Supabase.instance.client.storage
-              .from('ticket-images')
-              .upload(storagePath, selectedImage.value!);
-
-          imageUrl = Supabase.instance.client.storage
-              .from('ticket-images')
-              .getPublicUrl(storagePath);
+          debugPrint('Uploading ticket image…');
+          imageUrl = await repo.uploadTicketImage(
+            userId: userId,
+            file: selectedImage.value!,
+          );
           debugPrint('Image uploaded, URL: $imageUrl');
         }
 
@@ -184,13 +175,7 @@ class CreateRecordScreen extends HookConsumerWidget {
 
         debugPrint('Inserting record: $recordData');
 
-        final inserted = await Supabase.instance.client
-            .from('records')
-            .insert(recordData)
-            .select()
-            .single();
-
-        final newRecord = Record.fromJson(inserted);
+        final newRecord = await repo.insertRecord(recordData);
         debugPrint('Record inserted: ${newRecord.id}');
 
         if (context.mounted) {
@@ -277,7 +262,7 @@ class CreateRecordScreen extends HookConsumerWidget {
                     padding: const EdgeInsets.only(right: 12),
                     child: ChoiceChip(
                       label: Text(
-                        _getTypeLabel(type),
+                        type.japaneseLabel,
                         style: TextStyle(
                           color: isSelected
                               ? Colors.black
@@ -357,14 +342,14 @@ class CreateRecordScreen extends HookConsumerWidget {
             const SizedBox(height: 24),
 
             // 3. Basic Info Form
-            _buildTextField(
+            RecordFormTextField(
               controller: titleController,
               label: 'タイトル',
               icon: Icons.title,
               maxLength: RecordFieldLimits.title,
             ),
             const SizedBox(height: 16),
-            _buildTextField(
+            RecordFormTextField(
               controller: artistController,
               label: 'アーティスト / 作者',
               icon: Icons.person_outline,
@@ -416,7 +401,7 @@ class CreateRecordScreen extends HookConsumerWidget {
                           ),
                           // Picker
                           Expanded(
-                            child: _NumberDatePicker(
+                            child: NumberDatePickerSheet(
                               initialDate: date.value,
                               onDateChanged: (newDate) {
                                 date.value = newDate;
@@ -450,7 +435,11 @@ class CreateRecordScreen extends HookConsumerWidget {
                     ),
                     const SizedBox(width: 12),
                     Text(
-                      formatDate(date.value),
+                      formatJapaneseDate(
+                        date.value,
+                        includeWeekday: true,
+                        padMonthDay: true,
+                      ),
                       style: const TextStyle(
                         color: AppColors.textPrimary,
                         fontSize: 16,
@@ -464,7 +453,7 @@ class CreateRecordScreen extends HookConsumerWidget {
             ),
 
             const SizedBox(height: 16),
-            _buildTextField(
+            RecordFormTextField(
               controller: sourceController,
               label: '取得元 (e+, Amazon等)',
               icon: Icons.confirmation_number_outlined,
@@ -608,7 +597,7 @@ class CreateRecordScreen extends HookConsumerWidget {
               ),
 
               const SizedBox(height: 16),
-              _buildTextField(
+              RecordFormTextField(
                 controller: mcMemoController,
                 label: 'MCメモ',
                 icon: Icons.mic_none,
@@ -618,7 +607,7 @@ class CreateRecordScreen extends HookConsumerWidget {
               const SizedBox(height: 16),
             ],
 
-            _buildTextField(
+            RecordFormTextField(
               controller: impressionsController,
               label: '感想',
               icon: Icons.edit_note,
@@ -629,194 +618,6 @@ class CreateRecordScreen extends HookConsumerWidget {
             const SizedBox(height: 40),
           ],
         ),
-      ),
-    );
-  }
-
-  String _getTypeLabel(RecordType type) {
-    switch (type) {
-      case RecordType.live:
-        return 'ライブ';
-      case RecordType.movie:
-        return '映画';
-      case RecordType.book:
-        return '本';
-      case RecordType.other:
-        return 'その他';
-    }
-  }
-
-  Widget _buildTextField({
-    required TextEditingController controller,
-    required String label,
-    required IconData icon,
-    int maxLines = 1,
-    int? maxLength,
-  }) {
-    return TextField(
-      controller: controller,
-      maxLines: maxLines,
-      maxLength: maxLength,
-      style: const TextStyle(color: AppColors.textPrimary),
-      cursorColor: AppColors.gold,
-      decoration: InputDecoration(
-        labelText: label,
-        labelStyle: TextStyle(color: AppColors.textSecondary.withValues(alpha: 0.7)),
-        prefixIcon: Icon(
-          icon,
-          color: AppColors.gold.withValues(alpha: 0.7),
-          size: 20,
-        ),
-        filled: true,
-        fillColor: AppColors.surface,
-        enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: BorderSide(
-            color: AppColors.textDisabled.withValues(alpha: 0.3),
-          ),
-        ),
-        focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(12),
-          borderSide: const BorderSide(color: AppColors.gold),
-        ),
-        alignLabelWithHint: true,
-      ),
-    );
-  }
-}
-
-class _NumberDatePicker extends StatefulWidget {
-  final DateTime initialDate;
-  final ValueChanged<DateTime> onDateChanged;
-
-  const _NumberDatePicker({
-    required this.initialDate,
-    required this.onDateChanged,
-  });
-
-  @override
-  State<_NumberDatePicker> createState() => _NumberDatePickerState();
-}
-
-class _NumberDatePickerState extends State<_NumberDatePicker> {
-  late FixedExtentScrollController _yearController;
-  late FixedExtentScrollController _monthController;
-  late FixedExtentScrollController _dayController;
-
-  late int _selectedYear;
-  late int _selectedMonth;
-  late int _selectedDay;
-
-  final int _minYear = 2000;
-  final int _maxYear = 2100;
-
-  @override
-  void initState() {
-    super.initState();
-    _selectedYear = widget.initialDate.year;
-    _selectedMonth = widget.initialDate.month;
-    _selectedDay = widget.initialDate.day;
-
-    _yearController = FixedExtentScrollController(
-      initialItem: _selectedYear - _minYear,
-    );
-    _monthController = FixedExtentScrollController(
-      initialItem: _selectedMonth - 1,
-    );
-    _dayController = FixedExtentScrollController(initialItem: _selectedDay - 1);
-  }
-
-  @override
-  void dispose() {
-    _yearController.dispose();
-    _monthController.dispose();
-    _dayController.dispose();
-    super.dispose();
-  }
-
-  void _updateDate() {
-    final daysInMonth = DateTime(_selectedYear, _selectedMonth + 1, 0).day;
-    if (_selectedDay > daysInMonth) {
-      _selectedDay = daysInMonth;
-      if (_dayController.hasClients) {
-        _dayController.jumpToItem(_selectedDay - 1);
-      }
-    }
-
-    widget.onDateChanged(DateTime(_selectedYear, _selectedMonth, _selectedDay));
-    setState(() {}); // UI更新（日の最大値が変わる可能性があるため）
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      color: AppColors.surface,
-      child: Row(
-        children: [
-          // Year
-          Expanded(
-            child: CupertinoPicker.builder(
-              scrollController: _yearController,
-              itemExtent: 40,
-              onSelectedItemChanged: (index) {
-                _selectedYear = _minYear + index;
-                _updateDate();
-              },
-              itemBuilder: (context, index) {
-                if (index < 0 || index > (_maxYear - _minYear)) return null;
-                return Center(
-                  child: Text(
-                    '${_minYear + index}',
-                    style: const TextStyle(color: Colors.white, fontSize: 18),
-                  ),
-                );
-              },
-              childCount: _maxYear - _minYear + 1,
-            ),
-          ),
-          // Month
-          Expanded(
-            child: CupertinoPicker.builder(
-              scrollController: _monthController,
-              itemExtent: 40,
-              onSelectedItemChanged: (index) {
-                _selectedMonth = index + 1;
-                _updateDate();
-              },
-              itemBuilder: (context, index) {
-                return Center(
-                  child: Text(
-                    '${index + 1}',
-                    style: const TextStyle(color: Colors.white, fontSize: 18),
-                  ),
-                );
-              },
-              childCount: 12,
-            ),
-          ),
-          // Day
-          Expanded(
-            child: CupertinoPicker.builder(
-              scrollController: _dayController,
-              itemExtent: 40,
-              onSelectedItemChanged: (index) {
-                _selectedDay = index + 1;
-                widget.onDateChanged(
-                  DateTime(_selectedYear, _selectedMonth, _selectedDay),
-                );
-              },
-              itemBuilder: (context, index) {
-                return Center(
-                  child: Text(
-                    '${index + 1}',
-                    style: const TextStyle(color: Colors.white, fontSize: 18),
-                  ),
-                );
-              },
-              childCount: DateTime(_selectedYear, _selectedMonth + 1, 0).day,
-            ),
-          ),
-        ],
       ),
     );
   }
