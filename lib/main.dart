@@ -29,7 +29,7 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     // 2. MaterialApp.router: GoRouterを使ったナビゲーション機能付きのアプリ定義
     return MaterialApp.router(
-      title: 'Live Report',
+      title: 'recolle',
       debugShowCheckedModeBanner: false,
       // 3. テーマ設定: 別ファイルの AppTheme クラスで定義したダークテーマを適用
       theme: AppTheme.darkTheme,
