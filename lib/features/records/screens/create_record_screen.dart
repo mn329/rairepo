@@ -5,6 +5,8 @@ import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:recolle/core/constants/field_limits.dart';
+import 'package:recolle/core/constants/ticket_image_settings.dart';
+import 'package:recolle/core/utils/ticket_image_compress.dart';
 import 'package:recolle/core/theme/app_colors.dart';
 import 'package:recolle/core/utils/error_messages.dart';
 import 'package:recolle/core/utils/japanese_date_format.dart';
@@ -107,10 +109,16 @@ class CreateRecordScreen extends HookConsumerWidget {
 
     Future<void> pickImage() async {
       final picker = ImagePicker();
-      final pickedFile = await picker.pickImage(source: ImageSource.gallery);
+      final pickedFile = await picker.pickImage(
+        source: ImageSource.gallery,
+        maxWidth: TicketImageSettings.maxPickDimension,
+        maxHeight: TicketImageSettings.maxPickDimension,
+        imageQuality: TicketImageSettings.pickImageQuality,
+      );
 
       if (pickedFile != null) {
-        selectedImage.value = File(pickedFile.path);
+        final raw = File(pickedFile.path);
+        selectedImage.value = await compressTicketImageForUpload(raw);
       }
     }
 
