@@ -19,6 +19,12 @@ class RecordsRepository {
     await _client.from('records').delete().eq('id', id);
   }
 
+  Future<Record> updateRecord(String id, Map<String, dynamic> row) async {
+    final updated = await _client.from('records').update(row).eq('id', id).select().single();
+    final map = Map<String, dynamic>.from(updated as Map);
+    return Record.fromJson(map);
+  }
+
   /// アップロード後の公開 URL を返す。
   Future<String> uploadTicketImage({
     required String userId,
