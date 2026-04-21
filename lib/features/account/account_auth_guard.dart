@@ -1,4 +1,3 @@
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:recolle/core/utils/error_messages.dart';
 import 'package:recolle/features/account/services/auth_service.dart';
@@ -51,15 +50,13 @@ Future<void> runAccountAuthGuarded({
         ),
       );
     } else {
-      messenger.showSnackBar(
-        SnackBar(content: Text(toUserFriendlyMessage(e))),
-      );
+      messenger.showSnackBar(SnackBar(content: Text(toUserFriendlyMessage(e))));
     }
   } catch (e) {
     if (!context.mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(toUserFriendlyMessage(e))),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(toUserFriendlyMessage(e))));
   } finally {
     if (context.mounted) {
       setBusy(false);
