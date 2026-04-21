@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:recolle/features/records/models/record.dart';
 import 'package:recolle/core/theme/app_colors.dart';
+import 'package:recolle/core/widgets/decoded_network_image.dart';
+import 'package:recolle/features/records/models/record.dart';
 
 class RecordTicketCard extends StatefulWidget {
   final Record record;
@@ -82,11 +83,17 @@ class _RecordTicketCardState extends State<RecordTicketCard>
                 fit: StackFit.expand,
                 children: [
                   // 1. Background Image with Dark Overlay
-                  Image.network(
-                    widget.record.ticketImageUrl,
-                    fit: BoxFit.cover,
-                    errorBuilder: (context, error, stackTrace) {
-                      return Container(color: AppColors.surfaceLight);
+                  LayoutBuilder(
+                    builder: (context, constraints) {
+                      return DecodedNetworkImage(
+                        url: widget.record.ticketImageUrl,
+                        logicalWidth: constraints.maxWidth,
+                        logicalHeight: constraints.maxHeight,
+                        fit: BoxFit.cover,
+                        errorBuilder: (context, error, stackTrace) {
+                          return Container(color: AppColors.surfaceLight);
+                        },
+                      );
                     },
                   ),
                   // Dark Gradient Overlay to make text readable
@@ -94,7 +101,9 @@ class _RecordTicketCardState extends State<RecordTicketCard>
                     decoration: BoxDecoration(
                       gradient: LinearGradient(
                         colors: [
-                          Colors.black.withValues(alpha: 0.9), // Left (Text side)
+                          Colors.black.withValues(
+                            alpha: 0.9,
+                          ), // Left (Text side)
                           Colors.black.withValues(alpha: 0.6), // Center
                           Colors.black.withValues(alpha: 0.4), // Right
                         ],
