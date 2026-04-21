@@ -6,10 +6,11 @@ import 'package:hooks_riverpod/hooks_riverpod.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:recolle/core/constants/field_limits.dart';
 import 'package:recolle/core/constants/ticket_image_settings.dart';
-import 'package:recolle/core/utils/ticket_image_compress.dart';
 import 'package:recolle/core/theme/app_colors.dart';
 import 'package:recolle/core/utils/error_messages.dart';
 import 'package:recolle/core/utils/japanese_date_format.dart';
+import 'package:recolle/core/utils/ticket_image_compress.dart';
+import 'package:recolle/core/widgets/decoded_network_image.dart';
 import 'package:recolle/features/records/models/record.dart';
 import 'package:recolle/features/records/providers/records_provider.dart';
 import 'package:recolle/features/records/screens/detail_screen.dart';
@@ -391,30 +392,35 @@ class CreateRecordScreen extends HookConsumerWidget {
                     : (recordToEdit?.ticketImageUrl.isNotEmpty ?? false)
                     ? ClipRRect(
                         borderRadius: BorderRadius.circular(16),
-                        child: Image.network(
-                          recordToEdit!.ticketImageUrl,
-                          fit: BoxFit.cover,
-                          width: double.infinity,
-                          height: double.infinity,
-                          errorBuilder: (context, error, stackTrace) {
-                            return Column(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                Icon(
-                                  Icons.broken_image,
-                                  size: 48,
-                                  color: AppColors.gold.withValues(alpha: 0.5),
-                                ),
-                                const SizedBox(height: 12),
-                                Text(
-                                  '画像を読み込めません',
-                                  style: TextStyle(
-                                    color: AppColors.textSecondary.withValues(
-                                      alpha: 0.7,
+                        child: LayoutBuilder(
+                          builder: (context, constraints) {
+                            return DecodedNetworkImage(
+                              url: recordToEdit!.ticketImageUrl,
+                              logicalWidth: constraints.maxWidth,
+                              logicalHeight: constraints.maxHeight,
+                              fit: BoxFit.cover,
+                              errorBuilder: (context, error, stackTrace) {
+                                return Column(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    Icon(
+                                      Icons.broken_image,
+                                      size: 48,
+                                      color: AppColors.gold.withValues(
+                                        alpha: 0.5,
+                                      ),
                                     ),
-                                  ),
-                                ),
-                              ],
+                                    const SizedBox(height: 12),
+                                    Text(
+                                      '画像を読み込めません',
+                                      style: TextStyle(
+                                        color: AppColors.textSecondary
+                                            .withValues(alpha: 0.7),
+                                      ),
+                                    ),
+                                  ],
+                                );
+                              },
                             );
                           },
                         ),

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:recolle/core/theme/app_colors.dart';
+import 'package:recolle/core/widgets/decoded_network_image.dart';
 import 'package:recolle/core/utils/error_messages.dart';
 import 'package:recolle/core/utils/japanese_date_format.dart';
 import 'package:recolle/features/records/models/record.dart';
@@ -54,7 +55,8 @@ class _DetailScreenState extends ConsumerState<DetailScreen> {
                 context,
                 MaterialPageRoute(
                   fullscreenDialog: true,
-                  builder: (context) => CreateRecordScreen(recordToEdit: record),
+                  builder: (context) =>
+                      CreateRecordScreen(recordToEdit: record),
                 ),
               );
               if (updated != null && mounted) {
@@ -63,7 +65,10 @@ class _DetailScreenState extends ConsumerState<DetailScreen> {
             },
           ),
           IconButton(
-            icon: const Icon(Icons.delete_outline, color: AppColors.textSecondary),
+            icon: const Icon(
+              Icons.delete_outline,
+              color: AppColors.textSecondary,
+            ),
             onPressed: () => _confirmAndDelete(context, ref),
           ),
         ],
@@ -86,17 +91,23 @@ class _DetailScreenState extends ConsumerState<DetailScreen> {
                   ),
                 ],
               ),
-              child: Image.network(
-                record.ticketImageUrl,
-                fit: BoxFit.cover,
-                errorBuilder: (context, error, stackTrace) {
-                  return Container(
-                    color: AppColors.surfaceLight,
-                    child: const Icon(
-                      Icons.broken_image,
-                      size: 50,
-                      color: AppColors.textDisabled,
-                    ),
+              child: LayoutBuilder(
+                builder: (context, constraints) {
+                  return DecodedNetworkImage(
+                    url: record.ticketImageUrl,
+                    logicalWidth: constraints.maxWidth,
+                    logicalHeight: constraints.maxHeight,
+                    fit: BoxFit.cover,
+                    errorBuilder: (context, error, stackTrace) {
+                      return Container(
+                        color: AppColors.surfaceLight,
+                        child: const Icon(
+                          Icons.broken_image,
+                          size: 50,
+                          color: AppColors.textDisabled,
+                        ),
+                      );
+                    },
                   );
                 },
               ),
@@ -249,7 +260,11 @@ class _DetailScreenState extends ConsumerState<DetailScreen> {
   Widget _buildSetlistContent(String? setlistText) {
     final lines = (setlistText == null || setlistText.isEmpty)
         ? <String>[]
-        : setlistText.split('\n').map((s) => s.trim()).where((s) => s.isNotEmpty).toList();
+        : setlistText
+              .split('\n')
+              .map((s) => s.trim())
+              .where((s) => s.isNotEmpty)
+              .toList();
 
     if (lines.isEmpty) {
       return _buildSectionContent(null);
@@ -322,9 +337,9 @@ class _DetailScreenState extends ConsumerState<DetailScreen> {
 
       if (!context.mounted) return;
       ref.invalidate(recordsProvider);
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('記録を削除しました')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('記録を削除しました')));
       Navigator.of(context).pop();
     } catch (e) {
       if (context.mounted) {
