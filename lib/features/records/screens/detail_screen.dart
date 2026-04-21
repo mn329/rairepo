@@ -5,14 +5,37 @@ import 'package:recolle/core/utils/error_messages.dart';
 import 'package:recolle/core/utils/japanese_date_format.dart';
 import 'package:recolle/features/records/models/record.dart';
 import 'package:recolle/features/records/providers/records_provider.dart';
+import 'package:recolle/features/records/screens/create_record_screen.dart';
 
-class DetailScreen extends ConsumerWidget {
+class DetailScreen extends ConsumerStatefulWidget {
   const DetailScreen({super.key, required this.record});
 
   final Record record;
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<DetailScreen> createState() => _DetailScreenState();
+}
+
+class _DetailScreenState extends ConsumerState<DetailScreen> {
+  late Record _record;
+
+  @override
+  void initState() {
+    super.initState();
+    _record = widget.record;
+  }
+
+  @override
+  void didUpdateWidget(covariant DetailScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.record.id != widget.record.id) {
+      _record = widget.record;
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final record = _record;
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
@@ -23,6 +46,22 @@ class DetailScreen extends ConsumerWidget {
         backgroundColor: Colors.transparent,
         elevation: 0,
         actions: [
+          IconButton(
+            icon: const Icon(Icons.edit_outlined, color: AppColors.gold),
+            tooltip: '編集',
+            onPressed: () async {
+              final updated = await Navigator.push<Record>(
+                context,
+                MaterialPageRoute(
+                  fullscreenDialog: true,
+                  builder: (context) => CreateRecordScreen(recordToEdit: record),
+                ),
+              );
+              if (updated != null && mounted) {
+                setState(() => _record = updated);
+              }
+            },
+          ),
           IconButton(
             icon: const Icon(Icons.delete_outline, color: AppColors.textSecondary),
             onPressed: () => _confirmAndDelete(context, ref),
@@ -260,7 +299,7 @@ class DetailScreen extends ConsumerWidget {
       builder: (ctx) => AlertDialog(
         title: const Text('記録を削除しますか？'),
         content: Text(
-          '「${record.title}」を削除すると元に戻せません。',
+          '「${_record.title}」を削除すると元に戻せません。',
           style: const TextStyle(color: AppColors.textPrimary),
         ),
         actions: [
@@ -279,7 +318,7 @@ class DetailScreen extends ConsumerWidget {
     if (ok != true || !context.mounted) return;
 
     try {
-      await ref.read(recordsRepositoryProvider).deleteRecord(record.id);
+      await ref.read(recordsRepositoryProvider).deleteRecord(_record.id);
 
       if (!context.mounted) return;
       ref.invalidate(recordsProvider);
