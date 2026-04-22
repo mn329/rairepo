@@ -2,7 +2,7 @@ name: recolle
 description: "A new Flutter project."
 publish_to: "none"
 
-version: 1.0.0+1
+version: 1.0.0+3
 
 environment:
   sdk: ^3.9.2
@@ -25,6 +25,7 @@ dependencies:
   path_provider: ^2.1.5
   flutter_native_image: ^0.0.6+1
   flutter_launcher_icons: ^0.13.1
+  flutter_native_splash: ^2.4.1
 
 dev_dependencies:
   flutter_test:
@@ -42,3 +43,9 @@ flutter_icons:
   android: true
   ios: true
   image_path: "lib/assets/app_icon.png"
+
+flutter_native_splash:
+  color: "#000000"
+  image: "lib/assets/app_icon.png"
+  android: true
+  ios: true
