@@ -72,8 +72,20 @@ class _ForgotPasswordScreenState extends ConsumerState<ForgotPasswordScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: AppColors.background,
       appBar: AppBar(
-        title: const Text('パスワードを再設定'),
+        backgroundColor: AppColors.surface,
+        elevation: 0,
+        centerTitle: true,
+        iconTheme: const IconThemeData(color: AppColors.textSecondary),
+        title: const Text(
+          'パスワードを再設定',
+          style: TextStyle(
+            color: AppColors.gold,
+            fontWeight: FontWeight.bold,
+            fontSize: 18,
+          ),
+        ),
       ),
       body: ListView(
         padding: const EdgeInsets.all(24),
