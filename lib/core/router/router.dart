@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:app_links/app_links.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:recolle/core/auth/auth_reauth_in_progress.dart';
@@ -121,3 +122,69 @@ final router = GoRouter(
     ),
   ],
 );
+
+StreamSubscription<Uri>? _emailAuthLinkSubscription;
+StreamSubscription<AuthState>? _emailAuthStateSubscription;
+
+/// メール内の認証リンク（カスタムスキーム）でアプリが開いたあと、
+/// セッションが入ったタイミングでアカウントタブへ遷移する。
+void attachEmailLinkAccountNavigation() {
+  _emailAuthLinkSubscription?.cancel();
+  _emailAuthStateSubscription?.cancel();
+
+  var pendingAuthDeepLink = false;
+
+  bool isAuthCallbackUri(Uri? uri) {
+    if (uri == null) return false;
+    if (uri.scheme != 'io.supabase.recolle' || uri.host != 'login-callback') {
+      return false;
+    }
+    final f = uri.fragment;
+    if (f.contains('error_description')) return false;
+    return f.contains('access_token') ||
+        f.contains('code') ||
+        uri.queryParameters.containsKey('code');
+  }
+
+  void goAccountTab() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final nav = router.routerDelegate.navigatorKey.currentState;
+      if (nav != null && nav.mounted) {
+        router.go('/account');
+      }
+    });
+  }
+
+  void onAuthCallbackUri(Uri? uri) {
+    if (!isAuthCallbackUri(uri)) return;
+    pendingAuthDeepLink = true;
+    final s = Supabase.instance.client.auth.currentSession;
+    if (s != null && !s.user.isAnonymous) {
+      pendingAuthDeepLink = false;
+      goAccountTab();
+    }
+  }
+
+  _emailAuthLinkSubscription =
+      AppLinks().uriLinkStream.listen(onAuthCallbackUri);
+  unawaited(AppLinks().getInitialLink().then(onAuthCallbackUri));
+
+  Session? previousSession = Supabase.instance.client.auth.currentSession;
+  _emailAuthStateSubscription =
+      Supabase.instance.client.auth.onAuthStateChange.listen((data) {
+    final session = data.session;
+    try {
+      if (data.event == AuthChangeEvent.signedIn &&
+          session != null &&
+          !session.user.isAnonymous) {
+        final wasAnonymous = previousSession?.user.isAnonymous ?? false;
+        if (pendingAuthDeepLink || wasAnonymous) {
+          pendingAuthDeepLink = false;
+          goAccountTab();
+        }
+      }
+    } finally {
+      previousSession = session;
+    }
+  });
+}

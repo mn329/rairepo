@@ -23,9 +23,7 @@ Future<void> _ensureAnonymousSession() async {
         return true;
       }());
       if (attempt < 2) {
-        await Future<void>.delayed(
-          Duration(milliseconds: 300 * (attempt + 1)),
-        );
+        await Future<void>.delayed(Duration(milliseconds: 300 * (attempt + 1)));
       }
     }
   }
@@ -38,12 +36,18 @@ void main() async {
   await dotenv.load(fileName: ".env");
 
   // Supabaseの初期化
+
   await Supabase.initialize(
     url: dotenv.env['SUPABASE_URL'] ?? '',
     anonKey: dotenv.env['SUPABASE_ANON_KEY'] ?? '',
+    authOptions: const FlutterAuthClientOptions(
+      authFlowType: AuthFlowType.implicit,
+    ),
   );
 
   await _ensureAnonymousSession();
+
+  attachEmailLinkAccountNavigation();
 
   // 1. ProviderScope: Riverpodの状態管理をアプリ全体で使えるようにする
   runApp(const ProviderScope(child: MyApp()));

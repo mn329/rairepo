@@ -7,6 +7,11 @@ class AuthService {
 
   final SupabaseClient _client;
 
+  /// メール内リンクの戻り先（許可リスト・Site URL と一致させる）。
+  /// 末尾 `/` 付きだと OS や Supabase のリダイレクト組み立て次第でマッチしづらいことがある。
+  String get _emailAuthRedirectTo =>
+      kIsWeb ? Uri.base.origin : 'io.supabase.recolle://login-callback';
+
   User? get currentUser => _client.auth.currentUser;
   Session? get currentSession => _client.auth.currentSession;
 
@@ -36,7 +41,7 @@ class AuthService {
     await _client.auth.signUp(
       email: email.trim(),
       password: password,
-      emailRedirectTo: kIsWeb ? Uri.base.origin : 'io.supabase.recolle://login-callback/',
+      emailRedirectTo: _emailAuthRedirectTo,
     );
   }
 
@@ -53,7 +58,7 @@ class AuthService {
   Future<void> requestPasswordResetEmail({required String email}) async {
     await _client.auth.resetPasswordForEmail(
       email.trim(),
-      redirectTo: kIsWeb ? Uri.base.origin : 'io.supabase.recolle://login-callback/',
+      redirectTo: _emailAuthRedirectTo,
     );
   }
 
@@ -62,13 +67,16 @@ class AuthService {
     await _client.auth.resend(
       type: OtpType.signup,
       email: email.trim(),
-      emailRedirectTo: kIsWeb ? Uri.base.origin : 'io.supabase.recolle://login-callback/',
+      emailRedirectTo: _emailAuthRedirectTo,
     );
   }
 
   /// メールアドレスを変更します（通常は確認メールが送られます）。
   Future<void> updateEmail(String email) async {
-    await _client.auth.updateUser(UserAttributes(email: email.trim()));
+    await _client.auth.updateUser(
+      UserAttributes(email: email.trim()),
+      emailRedirectTo: _emailAuthRedirectTo,
+    );
   }
 
   /// パスワードを変更します。
@@ -109,6 +117,7 @@ class AuthService {
         password: password,
         data: data.isEmpty ? null : data,
       ),
+      emailRedirectTo: _emailAuthRedirectTo,
     );
   }
 
