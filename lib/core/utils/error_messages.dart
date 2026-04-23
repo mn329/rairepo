@@ -129,6 +129,14 @@ String _authMessage(String message) {
   if (m.contains('anonymous sign-ins are disabled')) {
     return '匿名ログインは無効になっています。';
   }
+  // レート制限（コードが付かない／文言だけの返答のとき）
+  if (m.contains('rate limit') ||
+      m.contains('too many requests') ||
+      m.contains('too_many') ||
+      m.contains('email rate limit') ||
+      m.contains('over_email_send')) {
+    return 'アクセスが集中しているか、短時間に試行しすぎています。しばらく待ってから再度お試しください。';
+  }
   // メール形式不正を示す文字列が含まれるか判定する
   if (m.contains('invalid email') ||
       m.contains('invalid format') ||
@@ -139,6 +147,11 @@ String _authMessage(String message) {
   // パスワードリセット系を示す文字列が含まれるか判定する
   if (m.contains('forgot password') || m.contains('reset password')) {
     return 'パスワードリセット用のメールを送信しました。メールをご確認ください。';
+  }
+  // メールアドレス変更の確認メール送信失敗（Auth API が 500 を返すことがある）
+  if (m.contains('error sending email change') ||
+      m.contains('sending email change')) {
+    return 'メールアドレス変更の確認メールを送れませんでした。Supabase の Authentication → SMTP（Resend 等）のホスト・ポート・認証情報・送信元ドメイン、および Resend のドメイン検証と API キーを確認してください。';
   }
   // 確認メール・SMTP 未設定（新規登録でよく出る）
   // メール送信失敗（SMTP 等）を示す文字列が含まれるか判定する
