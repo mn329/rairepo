@@ -39,19 +39,7 @@ class AccountPage extends HookConsumerWidget {
 
     return Scaffold(
       backgroundColor: AppColors.background,
-      appBar: AppBar(
-        backgroundColor: AppColors.surface,
-        elevation: 0,
-        centerTitle: true,
-        title: const Text(
-          'Account',
-          style: TextStyle(
-            color: AppColors.gold,
-            fontWeight: FontWeight.bold,
-            fontSize: 18,
-          ),
-        ),
-      ),
+      appBar: AppBar(title: const Text('Account')),
       body: authUser.when(
         loading: () => const Center(child: CircularProgressIndicator()),
         error: (e, _) => Center(

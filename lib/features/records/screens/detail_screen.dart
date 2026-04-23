@@ -41,14 +41,12 @@ class _DetailScreenState extends ConsumerState<DetailScreen> {
       backgroundColor: AppColors.background,
       appBar: AppBar(
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: AppColors.gold),
+          icon: const Icon(Icons.arrow_back),
           onPressed: () => Navigator.pop(context),
         ),
-        backgroundColor: Colors.transparent,
-        elevation: 0,
         actions: [
           IconButton(
-            icon: const Icon(Icons.edit_outlined, color: AppColors.gold),
+            icon: const Icon(Icons.edit_outlined),
             tooltip: '編集',
             onPressed: () async {
               final updated = await Navigator.push<Record>(
@@ -65,10 +63,7 @@ class _DetailScreenState extends ConsumerState<DetailScreen> {
             },
           ),
           IconButton(
-            icon: const Icon(
-              Icons.delete_outline,
-              color: AppColors.textSecondary,
-            ),
+            icon: const Icon(Icons.delete_outline),
             onPressed: () => _confirmAndDelete(context, ref),
           ),
         ],

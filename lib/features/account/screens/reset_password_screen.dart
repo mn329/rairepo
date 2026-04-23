@@ -63,20 +63,7 @@ class ResetPasswordScreen extends HookConsumerWidget {
 
     return Scaffold(
       backgroundColor: AppColors.background,
-      appBar: AppBar(
-        backgroundColor: AppColors.surface,
-        elevation: 0,
-        centerTitle: true,
-        iconTheme: const IconThemeData(color: AppColors.textSecondary),
-        title: const Text(
-          '新しいパスワードを設定',
-          style: TextStyle(
-            color: AppColors.gold,
-            fontWeight: FontWeight.bold,
-            fontSize: 18,
-          ),
-        ),
-      ),
+      appBar: AppBar(title: const Text('新しいパスワードを設定')),
       body: ListView(
         padding: const EdgeInsets.all(24),
         children: [

@@ -23,15 +23,16 @@ class HomeScreen extends ConsumerWidget {
           title: const Text(
             'Recolle',
             style: TextStyle(
-              fontFamily: 'Serif', // Elegant font if available, or default
+              fontFamily: 'Serif',
               letterSpacing: 1.5,
               fontWeight: FontWeight.bold,
               color: AppColors.gold,
+              fontSize: 22,
             ),
           ),
           actions: [
             IconButton(
-              icon: const Icon(Icons.add, color: AppColors.gold),
+              icon: const Icon(Icons.add),
               onPressed: () {
                 Navigator.push(
                   context,

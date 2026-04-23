@@ -304,16 +304,9 @@ class CreateRecordScreen extends HookConsumerWidget {
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
-        backgroundColor: AppColors.surface,
-        title: Text(
-          isEditMode ? '編集' : '新規登録',
-          style: const TextStyle(
-            color: AppColors.gold,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
+        title: Text(isEditMode ? '編集' : '新規登録'),
         leading: IconButton(
-          icon: const Icon(Icons.close, color: AppColors.textSecondary),
+          icon: const Icon(Icons.close),
           onPressed: () => Navigator.of(context).pop(),
         ),
         actions: [

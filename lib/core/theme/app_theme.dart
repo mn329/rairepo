@@ -16,17 +16,20 @@ class AppTheme {
       useMaterial3: true,
       fontFamily: 'Roboto',
 
-      // AppBar Theme
+      // AppBar: 全画面で surface 帯＋ゴールドタイトル＋控えめなアイコンに統一（個別画面は title のみ差し替え可）
       appBarTheme: const AppBarTheme(
-        backgroundColor: Colors.transparent,
+        backgroundColor: AppColors.surface,
+        surfaceTintColor: Colors.transparent,
         elevation: 0,
+        scrolledUnderElevation: 0,
         centerTitle: true,
         titleTextStyle: TextStyle(
-          color: AppColors.textPrimary,
+          color: AppColors.gold,
           fontSize: 18,
-          fontWeight: FontWeight.w600,
+          fontWeight: FontWeight.bold,
         ),
-        iconTheme: IconThemeData(color: AppColors.textPrimary),
+        iconTheme: IconThemeData(color: AppColors.textSecondary),
+        actionsIconTheme: IconThemeData(color: AppColors.textSecondary),
       ),
 
       // Navigation Bar Theme
