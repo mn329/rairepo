@@ -70,6 +70,14 @@ class AppTheme {
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
         ),
       ),
+
+      // SnackBar: M3 既定の floating は IME の直上に出ることがあるため fixed に統一する。
+      snackBarTheme: SnackBarThemeData(
+        behavior: SnackBarBehavior.fixed,
+        backgroundColor: AppColors.surfaceLight,
+        contentTextStyle: const TextStyle(color: AppColors.textPrimary),
+        actionTextColor: AppColors.gold,
+      ),
     );
   }
 }
