@@ -32,7 +32,7 @@ class HomeScreen extends ConsumerWidget {
           ),
           actions: [
             IconButton(
-              icon: const Icon(Icons.add),
+              icon: const Icon(Icons.add, color: AppColors.gold),
               onPressed: () {
                 Navigator.push(
                   context,
