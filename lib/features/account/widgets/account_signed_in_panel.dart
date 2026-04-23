@@ -1,6 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
-import 'package:recolle/core/theme/app_colors.dart';
 import 'package:recolle/core/widgets/confirm_dialog.dart';
 import 'package:recolle/features/account/widgets/account_expandable_section.dart';
 import 'package:recolle/features/account/services/auth_service.dart';
@@ -22,43 +20,6 @@ class AccountSignedInPanel extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        AccountExpandableSection(
-          title: 'パスワードの再設定',
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Text(
-                '登録メール宛に再設定用のリンクを送ります。メール内のリンクから新しいパスワードを設定してください。',
-                style: TextStyle(
-                  fontSize: 13,
-                  height: 1.4,
-                  color: AppColors.textSecondary.withAlpha(200),
-                ),
-              ),
-              const SizedBox(height: 12),
-              OutlinedButton(
-                onPressed: isBusy
-                    ? null
-                    : () {
-                        final email = authService.currentEmail?.trim();
-                        if (email == null || email.isEmpty) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('メールアドレスが取得できません。'),
-                            ),
-                          );
-                          return;
-                        }
-                        final q =
-                            '?email=${Uri.encodeComponent(email)}';
-                        context.push('/forgot-password$q');
-                      },
-                child: const Text('メールでパスワードを再設定'),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 16),
         AccountExpandableSection(
           title: 'ログアウト',
           child: FilledButton.tonal(
