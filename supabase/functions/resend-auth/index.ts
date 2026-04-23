@@ -1,9 +1,13 @@
+// Deno/Edge 用（https URL インポート、Deno グローバル）。本番の Supabase Edge では正しく解決される。
+// エディタが Node 向け tsserver の場合、ここに赤線が出ることがある。実行・デプロイ内容には影響しない。
+// 代替: Deno 拡張 + https://deno.land/manual/getting_started/setup_your_environment
+// @ts-nocheck
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
-import { createClient } from 'https://esm.sh/@supabase/supabase-js@2'
+import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.4"
 
-const RESEND_API_KEY = Deno.env.get('RESEND_API_KEY')
-const SUPABASE_URL = Deno.env.get('SUPABASE_URL')
-const SERVICE_ROLE_KEY = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')
+const RESEND_API_KEY = Deno.env.get("RESEND_API_KEY")
+const SUPABASE_URL = Deno.env.get("SUPABASE_URL")
+const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -11,12 +15,15 @@ const corsHeaders = {
 }
 
 serve(async (req) => {
-  if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders })
+  if (req.method === "OPTIONS") {
+    return new Response("ok", { headers: corsHeaders })
   }
 
   try {
-    const supabase = createClient(SUPABASE_URL!, SERVICE_ROLE_KEY!)
+    if (!SUPABASE_URL || !SERVICE_ROLE_KEY || !RESEND_API_KEY) {
+      throw new Error("サーバー設定（環境変数）が不足しています")
+    }
+    const supabase = createClient(SUPABASE_URL, SERVICE_ROLE_KEY)
     const { email, type, redirectTo } = await req.json()
 
     if (!email || !type) {
@@ -89,9 +96,10 @@ serve(async (req) => {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
       status: res.ok ? 200 : 400,
     })
-  } catch (error) {
-    return new Response(JSON.stringify({ error: error.message }), {
-      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+  } catch (e) {
+    const message = e instanceof Error ? e.message : String(e)
+    return new Response(JSON.stringify({ error: message }), {
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
       status: 400,
     })
   }
