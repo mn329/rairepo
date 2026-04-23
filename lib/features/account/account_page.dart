@@ -44,7 +44,7 @@ class AccountPage extends HookConsumerWidget {
         elevation: 0,
         centerTitle: true,
         title: const Text(
-          'アカウント',
+          'Account',
           style: TextStyle(
             color: AppColors.gold,
             fontWeight: FontWeight.bold,
