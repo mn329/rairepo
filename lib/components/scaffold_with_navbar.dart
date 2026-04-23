@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
+import 'package:recolle/core/theme/app_colors.dart';
 
 /// ボトムナビゲーションバーを持つScaffold
 /// 各画面の共通枠組みとして機能します
@@ -15,6 +16,7 @@ class ScaffoldWithNavBar extends StatelessWidget {
     // NavigationBarThemeのスタイルはmain.dart（AppTheme）で一括管理されているため
     // ここではNavigationBarThemeウィジェットでラップする必要はありません
     return Scaffold(
+      backgroundColor: AppColors.background,
       body: navigationShell,
       bottomNavigationBar: NavigationBar(
         selectedIndex: navigationShell.currentIndex,
