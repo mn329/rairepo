@@ -6,6 +6,31 @@ import 'package:recolle/core/router/router.dart';
 import 'package:recolle/core/theme/app_theme.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+/// App Store: メール等の未登録でも使えるよう、起動直後に匿名セッションを保証する。
+/// Supabase ダッシュボードで「Anonymous sign-ins」が有効なこと。
+Future<void> _ensureAnonymousSession() async {
+  final client = Supabase.instance.client;
+  if (client.auth.currentSession != null) {
+    return;
+  }
+  for (var attempt = 0; attempt < 3; attempt++) {
+    try {
+      await client.auth.signInAnonymously();
+      return;
+    } catch (e, st) {
+      assert(() {
+        debugPrint('Anonymous sign-in failed: $e\n$st');
+        return true;
+      }());
+      if (attempt < 2) {
+        await Future<void>.delayed(
+          Duration(milliseconds: 300 * (attempt + 1)),
+        );
+      }
+    }
+  }
+}
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
@@ -17,6 +42,8 @@ void main() async {
     url: dotenv.env['SUPABASE_URL'] ?? '',
     anonKey: dotenv.env['SUPABASE_ANON_KEY'] ?? '',
   );
+
+  await _ensureAnonymousSession();
 
   // 1. ProviderScope: Riverpodの状態管理をアプリ全体で使えるようにする
   runApp(const ProviderScope(child: MyApp()));

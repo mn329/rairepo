@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_hooks/flutter_hooks.dart';
 import 'package:hooks_riverpod/hooks_riverpod.dart';
+import 'package:recolle/core/auth/auth_reauth_in_progress.dart';
 import 'package:recolle/core/utils/error_messages.dart';
 import 'package:recolle/core/theme/app_colors.dart';
 import 'package:recolle/features/account/account_auth_guard.dart';
@@ -51,46 +52,77 @@ class AccountPage extends HookConsumerWidget {
           ),
         ),
         data: (user) {
-          final email = user?.email;
-          final isAnonymous = user?.isAnonymous ?? false;
+          return ListenableBuilder(
+            listenable: AuthReauthInProgress.instance,
+            builder: (context, child) {
+              // signOut 直後〜 signInAnonymously 完了まで一瞬 [user] が null になる。
+              // その区間を「未接続」と出すと、ログアウト操作直後に謎の画面になる。
+              if (user == null && AuthReauthInProgress.instance.isInProgress) {
+                return const Center(child: CircularProgressIndicator());
+              }
 
-          return ListView(
-            padding: const EdgeInsets.all(16),
-            children: [
-              AccountProfileCard(
-                title: user == null
-                    ? '未ログイン'
-                    : (email != null && email.isNotEmpty
-                          ? email
-                          : (isAnonymous ? '匿名ユーザー' : 'アカウント')),
-                subtitle: user == null
-                    ? 'ログインして利用を開始'
-                    : (isAnonymous ? '匿名でログイン中' : 'ログイン中'),
-              ),
-              const SizedBox(height: 16),
-              if (user == null)
-                AccountSignedOutPanel(
-                  emailController: emailController,
-                  passwordController: passwordController,
-                  passwordConfirmController: passwordConfirmController,
-                  isBusy: isBusy.value,
-                  isSignup: isSignup.value,
-                  onToggleSignupMode: () {
-                    isSignup.value = !isSignup.value;
-                    if (isSignup.value) {
-                      passwordConfirmController.clear();
-                    }
-                  },
-                  runGuarded: runGuarded,
-                  authService: authService,
-                )
-              else
-                AccountSignedInPanel(
-                  isBusy: isBusy.value,
-                  runGuarded: runGuarded,
-                  authService: authService,
-                ),
-            ],
+              final email = user?.email;
+              final isAnonymous = user?.isAnonymous ?? false;
+
+              return ListView(
+                padding: const EdgeInsets.all(16),
+                children: [
+                  AccountProfileCard(
+                    title: user == null
+                        ? '未接続'
+                        : (email != null && email.isNotEmpty
+                              ? email
+                              : (isAnonymous ? '未登録' : 'アカウント')),
+                    subtitle: user == null
+                        ? '下の「匿名IDで接続」から利用を再開するか、登録（任意）'
+                        : (isAnonymous ? '' : '登録中'),
+                  ),
+                  const SizedBox(height: 16),
+                  if (user == null)
+                    AccountSignedOutPanel(
+                      emailController: emailController,
+                      passwordController: passwordController,
+                      passwordConfirmController: passwordConfirmController,
+                      isBusy: isBusy.value,
+                      isSignup: isSignup.value,
+                      isAnonymous: false,
+                      showConnectionRecovery: true,
+                      onToggleSignupMode: () {
+                        isSignup.value = !isSignup.value;
+                        if (isSignup.value) {
+                          passwordConfirmController.clear();
+                        }
+                      },
+                      runGuarded: runGuarded,
+                      authService: authService,
+                    )
+                  else if (isAnonymous)
+                    AccountSignedOutPanel(
+                      emailController: emailController,
+                      passwordController: passwordController,
+                      passwordConfirmController: passwordConfirmController,
+                      isBusy: isBusy.value,
+                      isSignup: isSignup.value,
+                      isAnonymous: true,
+                      showConnectionRecovery: false,
+                      onToggleSignupMode: () {
+                        isSignup.value = !isSignup.value;
+                        if (isSignup.value) {
+                          passwordConfirmController.clear();
+                        }
+                      },
+                      runGuarded: runGuarded,
+                      authService: authService,
+                    )
+                  else
+                    AccountSignedInPanel(
+                      isBusy: isBusy.value,
+                      runGuarded: runGuarded,
+                      authService: authService,
+                    ),
+                ],
+              );
+            },
           );
         },
       ),

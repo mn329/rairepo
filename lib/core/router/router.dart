@@ -2,9 +2,10 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
-import 'package:recolle/features/account/account_page.dart';
+import 'package:recolle/core/auth/auth_reauth_in_progress.dart';
 import 'package:recolle/features/records/screens/home_screen.dart';
 import 'package:recolle/components/scaffold_with_navbar.dart';
+import 'package:recolle/features/account/account_page.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 // ナビゲーションの状態を管理するためのキー
@@ -31,25 +32,66 @@ final _authRefresh = _GoRouterRefreshStream(
   Supabase.instance.client.auth.onAuthStateChange,
 );
 
+/// 認証イベントと「匿名再ログイン中」フラグの双方で [GoRouter] を再評価する。
+final _goRouterListenable = _ListenablePair(
+  _authRefresh,
+  AuthReauthInProgress.instance,
+);
+
+class _ListenablePair extends ChangeNotifier {
+  _ListenablePair(this._a, this._b) {
+    _a.addListener(_notify);
+    _b.addListener(_notify);
+  }
+  final Listenable _a;
+  final Listenable _b;
+  void _notify() => notifyListeners();
+
+  @override
+  void dispose() {
+    _a.removeListener(_notify);
+    _b.removeListener(_notify);
+    super.dispose();
+  }
+}
+
 final router = GoRouter(
   navigatorKey: _rootNavigatorKey,
   initialLocation: '/',
-  refreshListenable: _authRefresh,
+  refreshListenable: _goRouterListenable,
   redirect: (context, state) {
     final session = Supabase.instance.client.auth.currentSession;
     final loggedIn = session != null;
+    final loc = state.matchedLocation;
 
-    final isLoginRoute = state.matchedLocation == '/login';
-
-    if (!loggedIn) {
-      return isLoginRoute ? null : '/login';
+    // ログアウト→匿名サインインの一瞬、セッションは null になる。そこで /account
+    // へ飛ばすと未接続UIがチラつくので、その間は遷移しない。
+    if (!loggedIn && AuthReauthInProgress.instance.isInProgress) {
+      return null;
     }
 
-    if (isLoginRoute) return '/';
+    // 未セッション時はタブ内のアカウントで再接続可能にする（メール必須の導線にしない）
+    if (!loggedIn) {
+      if (loc == '/account') {
+        return null;
+      }
+      if (loc == '/login') {
+        return '/account';
+      }
+      return '/account';
+    }
+
+    if (loc == '/login') {
+      return '/';
+    }
     return null;
   },
   routes: [
-    GoRoute(path: '/login', builder: (context, state) => const AccountPage()),
+    // 旧バージョンの /login ディープリンクを /account へ
+    GoRoute(
+      path: '/login',
+      redirect: (context, state) => '/account',
+    ),
     // StatefulShellRoute: タブ切り替え時に各画面の状態（スクロール位置など）を保持するためのルート
     StatefulShellRoute.indexedStack(
       builder: (context, state, navigationShell) {

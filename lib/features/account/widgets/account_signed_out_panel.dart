@@ -18,6 +18,8 @@ class AccountSignedOutPanel extends ConsumerWidget {
     required this.passwordConfirmController,
     required this.isBusy,
     required this.isSignup,
+    required this.isAnonymous,
+    required this.showConnectionRecovery,
     required this.onToggleSignupMode,
     required this.runGuarded,
     required this.authService,
@@ -28,17 +30,62 @@ class AccountSignedOutPanel extends ConsumerWidget {
   final TextEditingController passwordConfirmController;
   final bool isBusy;
   final bool isSignup;
+
+  /// 匿名セッションのまま、メール登録に進む（新規登録＝匿名の昇格）。
+  final bool isAnonymous;
+
+  /// セッションが取れていない場合の「匿名で再接続」用。
+  final bool showConnectionRecovery;
   final VoidCallback onToggleSignupMode;
   final Future<void> Function(Future<void> Function() fn) runGuarded;
   final AuthService authService;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final title = isAnonymous
+        ? (isSignup ? 'メールで新規登録' : 'メールでログイン')
+        : (isSignup ? '新規登録' : 'ログイン');
     return AccountExpandableSection(
-      title: isSignup ? '新規登録' : 'ログイン',
+      title: title,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
+          if (showConnectionRecovery) ...[
+            Text(
+              'Supabase への接続に失敗したか、前回のセッションが切れています。',
+              style: TextStyle(
+                fontSize: 13,
+                color: AppColors.textSecondary.withAlpha(200),
+              ),
+            ),
+            const SizedBox(height: 12),
+            FilledButton.tonal(
+              onPressed: isBusy
+                  ? null
+                  : () {
+                      runGuarded(() async {
+                        await authService.signInAnonymously();
+                        if (!context.mounted) return;
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('接続しました。思い出の記録を始められます。'),
+                          ),
+                        );
+                      });
+                    },
+              child: const Text('匿名IDで接続'),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'メール登録（任意）',
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+                color: AppColors.gold.withAlpha(220),
+              ),
+            ),
+            const SizedBox(height: 8),
+          ],
           TextField(
             controller: emailController,
             keyboardType: TextInputType.emailAddress,
@@ -81,11 +128,11 @@ class AccountSignedOutPanel extends ConsumerWidget {
                 onPressed: isBusy
                     ? null
                     : () => showForgotPasswordDialog(
-                          context: context,
-                          authService: authService,
-                          initialEmail: emailController.text,
-                          runGuarded: runGuarded,
-                        ),
+                        context: context,
+                        authService: authService,
+                        initialEmail: emailController.text,
+                        runGuarded: runGuarded,
+                      ),
                 child: Text(
                   'パスワードを忘れた場合',
                   style: TextStyle(
@@ -102,49 +149,54 @@ class AccountSignedOutPanel extends ConsumerWidget {
                 ? null
                 : () {
                     runGuarded(() async {
-                      final user =
-                          ref.read(authUserProvider).asData?.value;
+                      final user = ref.read(authUserProvider).asData?.value;
                       if (user != null && !user.isAnonymous) {
-                        throw const AuthException(
-                          '既にログイン（登録）済みのアカウントです。',
-                        );
+                        throw const AuthException('既にログイン（登録）済みのアカウントです。');
                       }
                       final e = emailController.text.trim();
                       if (!looksLikeEmail(e)) {
-                        throw const AuthException(
-                          'メールアドレスを入力してください。',
-                        );
+                        throw const AuthException('メールアドレスを入力してください。');
                       }
                       final password = passwordController.text;
                       if (!looksLikePassword(password)) {
-                        throw const AuthException(
-                          'パスワードは6文字以上で入力してください。',
-                        );
+                        throw const AuthException('パスワードは6文字以上で入力してください。');
                       }
                       if (isSignup) {
                         if (password != passwordConfirmController.text) {
-                          throw const AuthException(
-                            'パスワード（確認）が一致しません。',
-                          );
+                          throw const AuthException('パスワード（確認）が一致しません。');
                         }
-                        await authService.signUpWithPassword(
-                          email: e,
-                          password: password,
-                        );
-                        if (!context.mounted) return;
-                        FocusScope.of(context).unfocus();
-                        final needsConfirm =
-                            authService.currentSession == null;
-                        if (needsConfirm) {
-                          await showSignupEmailConfirmationDialog(
-                            context: context,
-                            authService: authService,
+                        if (isAnonymous) {
+                          await authService.upgradeAnonymousToPassword(
                             email: e,
+                            password: password,
+                          );
+                          if (!context.mounted) return;
+                          FocusScope.of(context).unfocus();
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('メールを紐づけました。データは同じIDのままです。'),
+                            ),
                           );
                         } else {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('登録しました')),
+                          await authService.signUpWithPassword(
+                            email: e,
+                            password: password,
                           );
+                          if (!context.mounted) return;
+                          FocusScope.of(context).unfocus();
+                          final needsConfirm =
+                              authService.currentSession == null;
+                          if (needsConfirm) {
+                            await showSignupEmailConfirmationDialog(
+                              context: context,
+                              authService: authService,
+                              email: e,
+                            );
+                          } else {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text('登録しました')),
+                            );
+                          }
                         }
                       } else {
                         await authService.signInWithPassword(
@@ -170,7 +222,7 @@ class AccountSignedOutPanel extends ConsumerWidget {
                   },
             child: Text(isSignup ? 'ログインはこちら' : '新規登録はこちら'),
           ),
-          if (isSignup) ...[
+          if (isSignup && !isAnonymous) ...[
             const SizedBox(height: 12),
             Text(
               '※ 確認メールが有効な場合、登録後にメール内のリンクから認証が必要です。',

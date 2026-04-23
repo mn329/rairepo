@@ -1,4 +1,5 @@
 import 'package:flutter/foundation.dart';
+import 'package:recolle/core/auth/auth_reauth_in_progress.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class AuthService {
@@ -118,7 +119,54 @@ class AuthService {
   /// 現在のセッションを破棄して、匿名セッションに戻します。
   /// このアプリは「ユーザーID単位」でrecordsを見ているため、IDが変わる点に注意。
   Future<void> resetToAnonymous() async {
-    await _client.auth.signOut();
-    await _client.auth.signInAnonymously();
+    AuthReauthInProgress.instance.begin();
+    try {
+      await _client.auth.signOut();
+      await _client.auth.signInAnonymously();
+    } finally {
+      AuthReauthInProgress.instance.end();
+    }
+  }
+
+  /// メール登録済みユーザーをアプリ上から完全削除（Edge Function `delete-account`）。
+  /// 成功後、匿名利用に戻る。
+  Future<void> deleteRegisteredAccount() async {
+    final user = currentUser;
+    if (user == null) {
+      throw const AuthException('セッションがありません。');
+    }
+    if (user.isAnonymous) {
+      throw const AuthException('メールで登録したアカウントのみ削除できます。');
+    }
+
+    try {
+      await _client.functions.invoke('delete-account');
+    } on FunctionException catch (e) {
+      String msg;
+      if (e.details is Map) {
+        final m = e.details as Map<dynamic, dynamic>;
+        final err = m['error'] ?? m['message'];
+        msg = err == null
+            ? 'アカウントの削除に失敗しました。'
+            : err.toString();
+      } else {
+        msg = e.details?.toString() ?? 'アカウントの削除に失敗しました。';
+      }
+      throw AuthException(msg);
+    }
+
+    AuthReauthInProgress.instance.begin();
+    try {
+      try {
+        await _client.auth.signOut();
+      } catch (_) {}
+      try {
+        await _client.auth.signInAnonymously();
+      } catch (e) {
+        throw AuthException('削除後の再接続に失敗しました: $e');
+      }
+    } finally {
+      AuthReauthInProgress.instance.end();
+    }
   }
 }
