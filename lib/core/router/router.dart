@@ -91,14 +91,13 @@ final router = GoRouter(
       return null;
     }
 
-    // メール登録済み（リカバリー中を除く）は「忘れた」導線ではなくアカウントへ。
+    // リカバリーリンク直後は「メール送信」ではなく新パスワード入力へ。
+    // ログイン済みでも /forgot-password は利用可（審査・利用者が再設定メールを送るため）。
     if (loc == '/forgot-password' &&
         loggedIn &&
-        !session.user.isAnonymous) {
-      if (sessionRequiresNewPasswordAfterRecovery(session)) {
-        return '/reset-password';
-      }
-      return '/account';
+        !session.user.isAnonymous &&
+        sessionRequiresNewPasswordAfterRecovery(session)) {
+      return '/reset-password';
     }
 
     // 未セッション時はタブ内のアカウントで再接続可能にする（メール必須の導線にしない）
@@ -128,6 +127,7 @@ final router = GoRouter(
     ),
     GoRoute(
       path: '/forgot-password',
+      parentNavigatorKey: _rootNavigatorKey,
       builder: (context, state) {
         final email = state.uri.queryParameters['email'] ?? '';
         return ForgotPasswordScreen(initialEmail: email);
@@ -135,6 +135,7 @@ final router = GoRouter(
     ),
     GoRoute(
       path: '/reset-password',
+      parentNavigatorKey: _rootNavigatorKey,
       builder: (context, state) => const ResetPasswordScreen(),
     ),
     // StatefulShellRoute: タブ切り替え時に各画面の状態（スクロール位置など）を保持するためのルート
