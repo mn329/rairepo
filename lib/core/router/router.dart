@@ -4,6 +4,9 @@ import 'package:app_links/app_links.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:recolle/core/auth/auth_reauth_in_progress.dart';
+import 'package:recolle/core/auth/recovery_session.dart';
+import 'package:recolle/features/account/screens/forgot_password_screen.dart';
+import 'package:recolle/features/account/screens/reset_password_screen.dart';
 import 'package:recolle/features/records/screens/home_screen.dart';
 import 'package:recolle/components/scaffold_with_navbar.dart';
 import 'package:recolle/features/account/account_page.dart';
@@ -71,6 +74,33 @@ final router = GoRouter(
       return null;
     }
 
+    // メールのパスワードリカバリーリンク後は、新パスワード入力画面へ誘導する。
+    if (loggedIn &&
+        !session.user.isAnonymous &&
+        sessionRequiresNewPasswordAfterRecovery(session) &&
+        loc != '/reset-password') {
+      return '/reset-password';
+    }
+
+    if (loc == '/reset-password') {
+      if (!loggedIn ||
+          session.user.isAnonymous ||
+          !sessionRequiresNewPasswordAfterRecovery(session)) {
+        return '/account';
+      }
+      return null;
+    }
+
+    // メール登録済み（リカバリー中を除く）は「忘れた」導線ではなくアカウントへ。
+    if (loc == '/forgot-password' &&
+        loggedIn &&
+        !session.user.isAnonymous) {
+      if (sessionRequiresNewPasswordAfterRecovery(session)) {
+        return '/reset-password';
+      }
+      return '/account';
+    }
+
     // 未セッション時はタブ内のアカウントで再接続可能にする（メール必須の導線にしない）
     if (!loggedIn) {
       if (loc == '/account') {
@@ -78,6 +108,9 @@ final router = GoRouter(
       }
       if (loc == '/login') {
         return '/account';
+      }
+      if (loc == '/forgot-password') {
+        return null;
       }
       return '/account';
     }
@@ -92,6 +125,17 @@ final router = GoRouter(
     GoRoute(
       path: '/login',
       redirect: (context, state) => '/account',
+    ),
+    GoRoute(
+      path: '/forgot-password',
+      builder: (context, state) {
+        final email = state.uri.queryParameters['email'] ?? '';
+        return ForgotPasswordScreen(initialEmail: email);
+      },
+    ),
+    GoRoute(
+      path: '/reset-password',
+      builder: (context, state) => const ResetPasswordScreen(),
     ),
     // StatefulShellRoute: タブ切り替え時に各画面の状態（スクロール位置など）を保持するためのルート
     StatefulShellRoute.indexedStack(
@@ -146,10 +190,16 @@ void attachEmailLinkAccountNavigation() {
         uri.queryParameters.containsKey('code');
   }
 
-  void goAccountTab() {
+  void goPostEmailAuthDestination() {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final nav = router.routerDelegate.navigatorKey.currentState;
-      if (nav != null && nav.mounted) {
+      if (nav == null || !nav.mounted) return;
+      final s = Supabase.instance.client.auth.currentSession;
+      if (s != null &&
+          !s.user.isAnonymous &&
+          sessionRequiresNewPasswordAfterRecovery(s)) {
+        router.go('/reset-password');
+      } else {
         router.go('/account');
       }
     });
@@ -161,7 +211,7 @@ void attachEmailLinkAccountNavigation() {
     final s = Supabase.instance.client.auth.currentSession;
     if (s != null && !s.user.isAnonymous) {
       pendingAuthDeepLink = false;
-      goAccountTab();
+      goPostEmailAuthDestination();
     }
   }
 
@@ -174,13 +224,20 @@ void attachEmailLinkAccountNavigation() {
       Supabase.instance.client.auth.onAuthStateChange.listen((data) {
     final session = data.session;
     try {
+      if (data.event == AuthChangeEvent.passwordRecovery &&
+          session != null &&
+          !session.user.isAnonymous) {
+        pendingAuthDeepLink = false;
+        goPostEmailAuthDestination();
+        return;
+      }
       if (data.event == AuthChangeEvent.signedIn &&
           session != null &&
           !session.user.isAnonymous) {
         final wasAnonymous = previousSession?.user.isAnonymous ?? false;
         if (pendingAuthDeepLink || wasAnonymous) {
           pendingAuthDeepLink = false;
-          goAccountTab();
+          goPostEmailAuthDestination();
         }
       }
     } finally {

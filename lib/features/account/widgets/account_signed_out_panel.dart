@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart';
 import 'package:recolle/core/constants/field_limits.dart';
 import 'package:recolle/core/theme/app_colors.dart';
 import 'package:recolle/features/account/account_signup_confirmation_dialog.dart';
 import 'package:recolle/features/account/account_validation.dart';
-import 'package:recolle/features/account/forgot_password_dialog.dart';
 import 'package:recolle/features/account/providers/auth_providers.dart';
 import 'package:recolle/features/account/widgets/account_expandable_section.dart';
 import 'package:recolle/features/account/services/auth_service.dart';
@@ -127,12 +127,13 @@ class AccountSignedOutPanel extends ConsumerWidget {
               child: TextButton(
                 onPressed: isBusy
                     ? null
-                    : () => showForgotPasswordDialog(
-                        context: context,
-                        authService: authService,
-                        initialEmail: emailController.text,
-                        runGuarded: runGuarded,
-                      ),
+                    : () {
+                        final e = emailController.text.trim();
+                        final q = e.isEmpty
+                            ? ''
+                            : '?email=${Uri.encodeComponent(e)}';
+                        context.push('/forgot-password$q');
+                      },
                 child: Text(
                   'パスワードを忘れた場合',
                   style: TextStyle(
