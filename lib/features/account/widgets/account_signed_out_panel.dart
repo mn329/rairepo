@@ -174,7 +174,7 @@ class AccountSignedOutPanel extends ConsumerWidget {
                           FocusScope.of(context).unfocus();
                           ScaffoldMessenger.of(context).showSnackBar(
                             const SnackBar(
-                              content: Text('メールを紐づけました。データは同じIDのままです。'),
+                              content: Text('メールを送信しました。メール内のリンクから認証が必要です。'),
                             ),
                           );
                         } else {
