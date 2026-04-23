@@ -75,6 +75,10 @@ class CreateRecordScreen extends HookConsumerWidget {
       text: recordToEdit?.impressions,
     );
 
+    final scrollController = useScrollController();
+    final currentSongFocusNode = useFocusNode();
+    final addSetlistSectionKey = useMemoized(GlobalKey.new);
+
     void tryAddSongToSetlist() {
       final line = currentSongController.text.trim();
       if (line.isEmpty) return;
@@ -106,6 +110,22 @@ class CreateRecordScreen extends HookConsumerWidget {
       );
       setlistLines.value = [...setlistLines.value, newLine];
       currentSongController.clear();
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!context.mounted) return;
+        final target = addSetlistSectionKey.currentContext;
+        if (target != null) {
+          Scrollable.ensureVisible(
+            target,
+            duration: const Duration(milliseconds: 320),
+            curve: Curves.easeOutCubic,
+            alignment: 1,
+            alignmentPolicy: ScrollPositionAlignmentPolicy.keepVisibleAtEnd,
+          );
+        }
+        if (currentSongFocusNode.canRequestFocus) {
+          currentSongFocusNode.requestFocus();
+        }
+      });
     }
 
     Future<void> pickImage() async {
@@ -273,6 +293,14 @@ class CreateRecordScreen extends HookConsumerWidget {
       }
     }
 
+    final keyboardInset = MediaQuery.viewInsetsOf(context).bottom;
+    final fieldScrollPadding = EdgeInsets.fromLTRB(
+      20,
+      24,
+      20,
+      keyboardInset + 120,
+    );
+
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
@@ -318,6 +346,8 @@ class CreateRecordScreen extends HookConsumerWidget {
         ],
       ),
       body: SingleChildScrollView(
+        controller: scrollController,
+        keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
         padding: const EdgeInsets.all(20),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -455,6 +485,7 @@ class CreateRecordScreen extends HookConsumerWidget {
               label: 'タイトル',
               icon: Icons.title,
               maxLength: RecordFieldLimits.title,
+              scrollPadding: fieldScrollPadding,
             ),
             const SizedBox(height: 16),
             RecordFormTextField(
@@ -462,6 +493,7 @@ class CreateRecordScreen extends HookConsumerWidget {
               label: 'アーティスト / 作者',
               icon: Icons.person_outline,
               maxLength: RecordFieldLimits.artistOrAuthor,
+              scrollPadding: fieldScrollPadding,
             ),
             const SizedBox(height: 16),
 
@@ -566,6 +598,7 @@ class CreateRecordScreen extends HookConsumerWidget {
               label: '取得元 (e+, Amazon等)',
               icon: Icons.confirmation_number_outlined,
               maxLength: RecordFieldLimits.ticketSource,
+              scrollPadding: fieldScrollPadding,
             ),
 
             const SizedBox(height: 32),
@@ -648,6 +681,7 @@ class CreateRecordScreen extends HookConsumerWidget {
                           key: ValueKey(lineId),
                           padding: EdgeInsets.only(bottom: isLast ? 0 : 10),
                           child: _SetlistSongRow(
+                            scrollPadding: fieldScrollPadding,
                             indexOneBased: i + 1,
                             line: line,
                             onTextChanged: (newText) {
@@ -674,6 +708,7 @@ class CreateRecordScreen extends HookConsumerWidget {
 
               // Add Song Input
               DecoratedBox(
+                key: addSetlistSectionKey,
                 decoration: BoxDecoration(
                   color: AppColors.surfaceLight,
                   borderRadius: BorderRadius.circular(14),
@@ -698,7 +733,9 @@ class CreateRecordScreen extends HookConsumerWidget {
                       Expanded(
                         child: TextField(
                           controller: currentSongController,
+                          focusNode: currentSongFocusNode,
                           maxLength: RecordFieldLimits.setlistSongLine,
+                          scrollPadding: fieldScrollPadding,
                           style: const TextStyle(
                             color: AppColors.textPrimary,
                             fontSize: 15,
@@ -760,6 +797,7 @@ class CreateRecordScreen extends HookConsumerWidget {
                 icon: Icons.mic_none,
                 maxLines: 3,
                 maxLength: RecordFieldLimits.mcMemo,
+                scrollPadding: fieldScrollPadding,
               ),
               const SizedBox(height: 16),
             ],
@@ -770,9 +808,10 @@ class CreateRecordScreen extends HookConsumerWidget {
               icon: Icons.edit_note,
               maxLines: 5,
               maxLength: RecordFieldLimits.impressions,
+              scrollPadding: fieldScrollPadding,
             ),
 
-            const SizedBox(height: 40),
+            SizedBox(height: 40 + keyboardInset),
           ],
         ),
       ),
@@ -782,6 +821,7 @@ class CreateRecordScreen extends HookConsumerWidget {
 
 class _SetlistSongRow extends StatefulWidget {
   const _SetlistSongRow({
+    required this.scrollPadding,
     required this.indexOneBased,
     required this.line,
     required this.onTextChanged,
@@ -789,6 +829,7 @@ class _SetlistSongRow extends StatefulWidget {
     required this.dragIndex,
   });
 
+  final EdgeInsets scrollPadding;
   final int indexOneBased;
   final _SetlistLine line;
   final ValueChanged<String> onTextChanged;
@@ -987,6 +1028,7 @@ class _SetlistSongRowState extends State<_SetlistSongRow>
                         child: TextField(
                           controller: _controller,
                           focusNode: _focusNode,
+                          scrollPadding: widget.scrollPadding,
                           maxLength: RecordFieldLimits.setlistSongLine,
                           maxLines: 2,
                           minLines: 1,

@@ -9,6 +9,7 @@ class RecordFormTextField extends StatelessWidget {
     required this.icon,
     this.maxLines = 1,
     this.maxLength,
+    this.scrollPadding,
   });
 
   final TextEditingController controller;
@@ -17,12 +18,16 @@ class RecordFormTextField extends StatelessWidget {
   final int maxLines;
   final int? maxLength;
 
+  /// 未指定時は [TextField] 既定。キーボード表示時に ensureVisible が十分スクロールするよう拡げる。
+  final EdgeInsets? scrollPadding;
+
   @override
   Widget build(BuildContext context) {
     return TextField(
       controller: controller,
       maxLines: maxLines,
       maxLength: maxLength,
+      scrollPadding: scrollPadding ?? const EdgeInsets.all(20),
       style: const TextStyle(color: AppColors.textPrimary),
       cursorColor: AppColors.gold,
       decoration: InputDecoration(
