@@ -4,6 +4,7 @@ import 'package:app_links/app_links.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:recolle/core/auth/auth_reauth_in_progress.dart';
+import 'package:recolle/core/auth/password_recovery_nav_flag.dart';
 import 'package:recolle/core/auth/recovery_session.dart';
 import 'package:recolle/features/account/screens/forgot_password_screen.dart';
 import 'package:recolle/features/account/screens/reset_password_screen.dart';
@@ -36,28 +37,12 @@ final _authRefresh = _GoRouterRefreshStream(
   Supabase.instance.client.auth.onAuthStateChange,
 );
 
-/// 認証イベントと「匿名再ログイン中」フラグの双方で [GoRouter] を再評価する。
-final _goRouterListenable = _ListenablePair(
+/// 認証イベント・匿名再ログイン中・再設定誘導フラグのいずれかで [GoRouter] を再評価する。
+final _goRouterListenable = Listenable.merge([
   _authRefresh,
   AuthReauthInProgress.instance,
-);
-
-class _ListenablePair extends ChangeNotifier {
-  _ListenablePair(this._a, this._b) {
-    _a.addListener(_notify);
-    _b.addListener(_notify);
-  }
-  final Listenable _a;
-  final Listenable _b;
-  void _notify() => notifyListeners();
-
-  @override
-  void dispose() {
-    _a.removeListener(_notify);
-    _b.removeListener(_notify);
-    super.dispose();
-  }
-}
+  PasswordRecoveryNavFlag.instance,
+]);
 
 final router = GoRouter(
   navigatorKey: _rootNavigatorKey,
@@ -225,9 +210,13 @@ void attachEmailLinkAccountNavigation() {
       Supabase.instance.client.auth.onAuthStateChange.listen((data) {
     final session = data.session;
     try {
+      if (data.event == AuthChangeEvent.signedOut) {
+        PasswordRecoveryNavFlag.instance.clear();
+      }
       if (data.event == AuthChangeEvent.passwordRecovery &&
           session != null &&
           !session.user.isAnonymous) {
+        PasswordRecoveryNavFlag.instance.setActiveFromAuthEvent();
         pendingAuthDeepLink = false;
         goPostEmailAuthDestination();
         return;
