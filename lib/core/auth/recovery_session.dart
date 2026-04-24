@@ -30,6 +30,9 @@ bool accessTokenRequiresPasswordRecovery(String accessToken) {
 /// そのため [AuthChangeEvent.passwordRecovery] 時に立てるフラグを OR する。
 bool sessionRequiresNewPasswordAfterRecovery(Session? session) {
   if (session == null || session.user.isAnonymous) return false;
+  if (PasswordRecoveryNavFlag.instance.bypassesRecoverySessionGuard) {
+    return false;
+  }
   if (PasswordRecoveryNavFlag.instance.isActive) return true;
   return accessTokenRequiresPasswordRecovery(session.accessToken);
 }
