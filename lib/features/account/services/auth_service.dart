@@ -1,4 +1,5 @@
 import 'package:recolle/core/auth/auth_reauth_in_progress.dart';
+import 'package:recolle/core/auth/password_recovery_nav_flag.dart';
 import 'package:recolle/core/constants/auth_redirect.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -80,6 +81,7 @@ class AuthService {
   /// パスワードを変更します。
   Future<void> updatePassword(String password) async {
     await _client.auth.updateUser(UserAttributes(password: password));
+    PasswordRecoveryNavFlag.instance.clear();
   }
 
   /// セッション更新（期限切れ対策）。
@@ -121,6 +123,7 @@ class AuthService {
 
   Future<void> signOut() async {
     await _client.auth.signOut();
+    PasswordRecoveryNavFlag.instance.clear();
   }
 
   /// 現在のセッションを破棄して、匿名セッションに戻します。
