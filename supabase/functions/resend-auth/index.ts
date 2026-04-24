@@ -24,7 +24,10 @@ serve(async (req) => {
       throw new Error("サーバー設定（環境変数）が不足しています")
     }
     const supabase = createClient(SUPABASE_URL, SERVICE_ROLE_KEY)
-    const { email, type, redirectTo } = await req.json()
+    // Flutter アプリ（auth_service）と同じ。未指定のときのメールリンク先が https の Site URL になりアプリに戻らないのを防ぐ
+    const DEFAULT_APP_REDIRECT = "io.supabase.recolle://login-callback"
+    const { email, type, redirectTo: redirectToRaw } = await req.json()
+    const redirectTo = redirectToRaw || DEFAULT_APP_REDIRECT
 
     if (!email || !type) {
       throw new Error('メールアドレスと送信タイプは必須です')
@@ -44,10 +47,7 @@ serve(async (req) => {
       throw new Error('無効な送信タイプです')
     }
 
-    const options: any = {}
-    if (redirectTo) {
-      options.redirectTo = redirectTo
-    }
+    const options: any = { redirectTo }
 
     // 認証用リンクを生成
     const { data: linkData, error: linkError } = await supabase.auth.admin.generateLink({
