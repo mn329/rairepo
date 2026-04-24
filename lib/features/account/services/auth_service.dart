@@ -1,5 +1,5 @@
-import 'package:flutter/foundation.dart';
 import 'package:recolle/core/auth/auth_reauth_in_progress.dart';
+import 'package:recolle/core/constants/auth_redirect.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 class AuthService {
@@ -7,10 +7,8 @@ class AuthService {
 
   final SupabaseClient _client;
 
-  /// メール内リンクの戻り先（許可リスト・Site URL と一致させる）。
-  /// 末尾 `/` 付きだと OS や Supabase のリダイレクト組み立て次第でマッチしづらいことがある。
-  String get _emailAuthRedirectTo =>
-      kIsWeb ? Uri.base.origin : 'io.supabase.recolle://login-callback';
+  /// メール内リンクの戻り先（Supabase ダッシュボードの Redirect URLs に同じURLを登録する）。
+  String get _emailAuthRedirectTo => supabaseEmailRedirectToForPlatform();
 
   User? get currentUser => _client.auth.currentUser;
   Session? get currentSession => _client.auth.currentSession;
