@@ -40,8 +40,10 @@ void main() async {
   await Supabase.initialize(
     url: dotenv.env['SUPABASE_URL'] ?? '',
     anonKey: dotenv.env['SUPABASE_ANON_KEY'] ?? '',
+    // 実機: メールのリカバリーリンクは PKCE（?code=）のため。implicit だと
+    // ディープリンクが getSessionFromUrl として処理されず再設定画面に進めない。
     authOptions: const FlutterAuthClientOptions(
-      authFlowType: AuthFlowType.implicit,
+      authFlowType: AuthFlowType.pkce,
     ),
   );
 
