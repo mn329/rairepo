@@ -7,33 +7,53 @@
 | 領域 | 利用パッケージ |
 |------|----------------|
 | ルーティング | [go_router](https://pub.dev/packages/go_router)（タブは `StatefulShellRoute` で各スタックの状態を保持） |
-| バックエンド・認証 | [supabase_flutter](https://pub.dev/packages/supabase_flutter) |
+| バックエンド・認証 | [supabase_flutter](https://pub.dev/packages/supabase_flutter)（PKCE）、[jwt_decode](https://pub.dev/packages/jwt_decode) |
+| ディープリンク（メール認証コールバック） | [app_links](https://pub.dev/packages/app_links) |
 | 状態管理 | [flutter_riverpod](https://pub.dev/packages/flutter_riverpod) / [hooks_riverpod](https://pub.dev/packages/hooks_riverpod)、[flutter_hooks](https://pub.dev/packages/flutter_hooks) |
 | 環境変数 | [flutter_dotenv](https://pub.dev/packages/flutter_dotenv) |
-| 画像選択 | [image_picker](https://pub.dev/packages/image_picker) |
+| ロケール | `flutter_localizations`（`supportedLocales`: 日本語） |
+| 画像 | [image_picker](https://pub.dev/packages/image_picker)、[flutter_image_compress](https://pub.dev/packages/flutter_image_compress) ほか |
 
-Dart SDK: `^3.9.2`（`pubspec.yaml` 参照）
+Dart SDK: `^3.9.2`（`pubspec.yaml` 参照）。Flutter はこの SDK に対応した安定版を用意してください。
 
 ## セットアップ
 
-1. リポジトリルートに `.env` を用意し、次のキーを設定します（値は Supabase ダッシュボードから取得）。
+1. リポジトリルートに `.env` を作成します。雛形は `env.example` なので、コピーして値を埋めてください。
 
    - `SUPABASE_URL`
    - `SUPABASE_ANON_KEY`
 
-2. `.env` は `pubspec.yaml` の `assets` に含まれているため、**機密をコミットしない**よう `.gitignore` で除外してください。
+   値は Supabase ダッシュボードの Project Settings → API から取得します。
 
-3. 依存関係の取得と実行:
+2. `.env` は `pubspec.yaml` の `assets` に含めてビルドに同梱します。**リポジトリにコミットしない**でください（ルートの `.gitignore` で `.env` を除外済み）。
+
+3. **Supabase 側の設定（アプリが動くための前提）**
+
+   - **Authentication → Providers → Anonymous sign-ins** を有効にする（起動時に匿名セッションを確保するため）。
+   - **Authentication → URL Configuration → Redirect URLs** に、メール内リンクの戻り先を登録する。
+     - モバイル（本リポジトリの iOS/Android 設定と一致）: `io.supabase.recolle://login-callback`（末尾スラッシュなし。定数は `lib/core/constants/auth_redirect.dart` の `kSupabaseAppEmailRedirect`）。
+     - Web で動かす場合は、そのオリジン（例: `http://localhost:xxxx`）も Redirect URLs に含める（アプリは `Uri.base.origin` をメール用 `redirectTo` に使います）。
+
+4. 依存関係の取得と実行:
 
    ```bash
    flutter pub get
    flutter run
    ```
 
+   品質確認の例:
+
+   ```bash
+   flutter analyze
+   flutter test
+   ```
+
 ## アプリの動き（概要）
 
-- **未ログイン**: `/login`（アカウント画面）へ誘導。
-- **ログイン後**: 下部ナビで **ホーム（`/`）** と **アカウント（`/account`）** の 2 タブ。認証状態は Supabase の `onAuthStateChange` を GoRouter の `refreshListenable` に渡し、セッション変化でルートを再評価します。
+- **セッション**: 起動時にセッションが無ければ匿名サインインを試みます（Supabase で匿名ログインが有効なことが前提）。
+- **ルーティング**: セッションが無い間は `/account` など再接続しやすい導線を優先します。旧パスの `/login` は **`/account` へリダイレクト**されます。
+- **メール認証・リカバリ**: `app_links` でカスタムスキーム `io.supabase.recolle://login-callback` を受け取り、セッション確立後にアカウントタブや `/reset-password` へ遷移します。
+- **タブ UI**: 下部ナビで **ホーム（`/`）** と **アカウント（`/account`）** の 2 タブ。認証状態は Supabase の `onAuthStateChange`（ほか再認証・パスワードリカバリ用のフラグ）を GoRouter の `refreshListenable` に渡し、セッション変化でルートを再評価します。
 
 ## プロジェクト構成（`lib/`）
 
@@ -41,6 +61,10 @@ Dart SDK: `^3.9.2`（`pubspec.yaml` 参照）
 - `features/records/` … レコード一覧・作成・詳細、モデル、プロバイダ
 - `features/account/` … 認証サービス、プロバイダ、アカウント UI
 - `components/` … ナビ付きスキャフォールド、チケット風カードなど
+
+## Supabase Edge Functions（任意）
+
+バックエンドを自プロジェクトにデプロイする場合、`supabase/functions/` に Resend 経由の認証メール送信（`resend-auth`）やアカウント削除用（`delete-account`）などの関数があります。必要なシークレット（例: `SUPABASE_SERVICE_ROLE_KEY`、`RESEND_API_KEY`）は各関数のソース内の `Deno.env.get(...)` を参照してください。
 
 ## 参考リンク
 
