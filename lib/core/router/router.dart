@@ -157,7 +157,7 @@ StreamSubscription<Uri>? _emailAuthLinkSubscription;
 StreamSubscription<AuthState>? _emailAuthStateSubscription;
 
 /// メール内の認証リンク（カスタムスキーム）でアプリが開いたあと、
-/// セッションが入ったタイミングでアカウントタブへ遷移する。
+/// セッションが入ったタイミングでホームへ遷移する（パスワード再設定時は /reset-password）。
 void attachEmailLinkAccountNavigation() {
   _emailAuthLinkSubscription?.cancel();
   _emailAuthStateSubscription?.cancel();
@@ -176,19 +176,39 @@ void attachEmailLinkAccountNavigation() {
         uri.queryParameters.containsKey('code');
   }
 
-  void goPostEmailAuthDestination() {
+  /// メールリンク後の遷移。セッションがメールユーザーに切り替わってからホームへ向ける。
+  Future<void> goPostEmailAuthDestinationAsync() async {
+    await Future<void>.delayed(Duration.zero);
+    var s = Supabase.instance.client.auth.currentSession;
+    if (s == null || s.user.isAnonymous) return;
+
+    if (sessionRequiresNewPasswordAfterRecovery(s)) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        final nav = router.routerDelegate.navigatorKey.currentState;
+        if (nav == null || !nav.mounted) return;
+        router.go('/reset-password');
+      });
+      return;
+    }
+
+    try {
+      await Supabase.instance.client.auth.refreshSession();
+    } catch (_) {}
+
+    s = Supabase.instance.client.auth.currentSession;
+    if (s == null || s.user.isAnonymous) return;
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final nav = router.routerDelegate.navigatorKey.currentState;
       if (nav == null || !nav.mounted) return;
-      final s = Supabase.instance.client.auth.currentSession;
-      if (s != null &&
-          !s.user.isAnonymous &&
-          sessionRequiresNewPasswordAfterRecovery(s)) {
-        router.go('/reset-password');
-      } else {
-        router.go('/account');
-      }
+      final latest = Supabase.instance.client.auth.currentSession;
+      if (latest == null || latest.user.isAnonymous) return;
+      router.go('/');
     });
+  }
+
+  void goPostEmailAuthDestination() {
+    unawaited(goPostEmailAuthDestinationAsync());
   }
 
   void onAuthCallbackUri(Uri? uri) {
