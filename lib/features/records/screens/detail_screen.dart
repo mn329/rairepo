@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:recolle/core/network/connectivity_provider.dart';
 import 'package:recolle/core/theme/app_colors.dart';
 import 'package:recolle/core/widgets/decoded_network_image.dart';
 import 'package:recolle/core/utils/error_messages.dart';
@@ -37,6 +38,7 @@ class _DetailScreenState extends ConsumerState<DetailScreen> {
   @override
   Widget build(BuildContext context) {
     final record = _record;
+    final readOnlyOffline = ref.watch(isOfflineReadOnlyProvider);
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
@@ -46,25 +48,37 @@ class _DetailScreenState extends ConsumerState<DetailScreen> {
         ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.edit_outlined),
-            tooltip: '編集',
-            onPressed: () async {
-              final updated = await Navigator.push<Record>(
-                context,
-                MaterialPageRoute(
-                  fullscreenDialog: true,
-                  builder: (context) =>
-                      CreateRecordScreen(recordToEdit: record),
-                ),
-              );
-              if (updated != null && mounted) {
-                setState(() => _record = updated);
-              }
-            },
+            icon: Icon(
+              Icons.edit_outlined,
+              color: readOnlyOffline ? AppColors.textDisabled : null,
+            ),
+            tooltip:
+                readOnlyOffline ? 'オフラインでは編集できません' : '編集',
+            onPressed: readOnlyOffline
+                ? null
+                : () async {
+                    final updated = await Navigator.push<Record>(
+                      context,
+                      MaterialPageRoute(
+                        fullscreenDialog: true,
+                        builder: (context) =>
+                            CreateRecordScreen(recordToEdit: record),
+                      ),
+                    );
+                    if (updated != null && mounted) {
+                      setState(() => _record = updated);
+                    }
+                  },
           ),
           IconButton(
-            icon: const Icon(Icons.delete_outline),
-            onPressed: () => _confirmAndDelete(context, ref),
+            icon: Icon(
+              Icons.delete_outline,
+              color: readOnlyOffline ? AppColors.textDisabled : null,
+            ),
+            tooltip:
+                readOnlyOffline ? 'オフラインでは削除できません' : '削除',
+            onPressed:
+                readOnlyOffline ? null : () => _confirmAndDelete(context, ref),
           ),
         ],
       ),

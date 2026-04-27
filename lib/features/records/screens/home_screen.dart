@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:recolle/components/record_ticket_card.dart';
+import 'package:recolle/core/network/connectivity_provider.dart';
 import 'package:recolle/core/theme/app_colors.dart';
 import 'package:recolle/core/utils/error_messages.dart';
 import 'package:recolle/features/records/models/record.dart';
@@ -14,6 +15,7 @@ class HomeScreen extends ConsumerWidget {
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final recordsAsync = ref.watch(recordsProvider);
+    final readOnlyOffline = ref.watch(isOfflineReadOnlyProvider);
 
     return DefaultTabController(
       length: 4,
@@ -32,16 +34,25 @@ class HomeScreen extends ConsumerWidget {
           ),
           actions: [
             IconButton(
-              icon: const Icon(Icons.add, color: AppColors.gold),
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => const CreateRecordScreen(),
-                    fullscreenDialog: true,
-                  ),
-                );
-              },
+              icon: Icon(
+                Icons.add,
+                color: readOnlyOffline
+                    ? AppColors.textDisabled
+                    : AppColors.gold,
+              ),
+              tooltip:
+                  readOnlyOffline ? 'オフラインでは新規作成できません' : '記録を追加',
+              onPressed: readOnlyOffline
+                  ? null
+                  : () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const CreateRecordScreen(),
+                          fullscreenDialog: true,
+                        ),
+                      );
+                    },
             ),
           ],
           bottom: TabBar(
@@ -55,12 +66,45 @@ class HomeScreen extends ConsumerWidget {
           ),
         ),
         body: recordsAsync.when(
-          data: (records) => TabBarView(
+          data: (records) => Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              _buildRecordList(context, records, RecordType.live),
-              _buildRecordList(context, records, RecordType.movie),
-              _buildRecordList(context, records, RecordType.book),
-              _buildRecordList(context, records, RecordType.other),
+              if (readOnlyOffline)
+                Container(
+                  width: double.infinity,
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                  color: AppColors.surfaceLight,
+                  child: const Row(
+                    children: [
+                      Icon(
+                        Icons.wifi_off_rounded,
+                        size: 18,
+                        color: AppColors.textSecondary,
+                      ),
+                      SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          'オフラインです。キャッシュがある記録は閲覧のみできます。',
+                          style: TextStyle(
+                            color: AppColors.textSecondary,
+                            fontSize: 13,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              Expanded(
+                child: TabBarView(
+                  children: [
+                    _buildRecordList(context, records, RecordType.live),
+                    _buildRecordList(context, records, RecordType.movie),
+                    _buildRecordList(context, records, RecordType.book),
+                    _buildRecordList(context, records, RecordType.other),
+                  ],
+                ),
+              ),
             ],
           ),
           loading: () => const Center(
