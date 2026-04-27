@@ -1,13 +1,24 @@
+import 'package:app_links/app_links.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:recolle/core/auth/email_auth_deep_link.dart';
 import 'package:recolle/core/router/router.dart';
 import 'package:recolle/core/theme/app_theme.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 /// App Store: メール等の未登録でも使えるよう、起動直後に匿名セッションを保証する。
 /// Supabase ダッシュボードで「Anonymous sign-ins」が有効なこと。
+Future<void> _exchangeEmailAuthDeepLinkFromInitialLink() async {
+  Uri? uri;
+  try {
+    uri = await AppLinks().getInitialLink();
+  } catch (_) {}
+  if (!isEmailAuthCallbackDeepLink(uri)) return;
+  await exchangeSessionFromEmailAuthDeepLink(uri!);
+}
+
 Future<void> _ensureAnonymousSession() async {
   final client = Supabase.instance.client;
   if (client.auth.currentSession != null) {
@@ -44,6 +55,9 @@ void main() async {
       authFlowType: AuthFlowType.pkce,
     ),
   );
+
+  // メール認証リンクで冷起動したときは、匿名ログインより先に code を交換してログイン状態にする。
+  await _exchangeEmailAuthDeepLinkFromInitialLink();
 
   // セッションがない場合は匿名サインインを試みる
   await _ensureAnonymousSession();

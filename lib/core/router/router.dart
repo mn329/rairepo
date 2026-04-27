@@ -4,6 +4,7 @@ import 'package:app_links/app_links.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:recolle/core/auth/auth_reauth_in_progress.dart';
+import 'package:recolle/core/auth/email_auth_deep_link.dart';
 import 'package:recolle/core/auth/password_recovery_nav_flag.dart';
 import 'package:recolle/core/auth/recovery_session.dart';
 import 'package:recolle/features/account/screens/forgot_password_screen.dart';
@@ -164,18 +165,6 @@ void attachEmailLinkAccountNavigation() {
 
   var pendingAuthDeepLink = false;
 
-  bool isAuthCallbackUri(Uri? uri) {
-    if (uri == null) return false;
-    if (uri.scheme != 'io.supabase.recolle' || uri.host != 'login-callback') {
-      return false;
-    }
-    final f = uri.fragment;
-    if (f.contains('error_description')) return false;
-    return f.contains('access_token') ||
-        f.contains('code') ||
-        uri.queryParameters.containsKey('code');
-  }
-
   /// メールリンク後の遷移。セッションがメールユーザーに切り替わってからホームへ向ける。
   Future<void> goPostEmailAuthDestinationAsync() async {
     await Future<void>.delayed(Duration.zero);
@@ -212,8 +201,10 @@ void attachEmailLinkAccountNavigation() {
   }
 
   void onAuthCallbackUri(Uri? uri) {
-    if (!isAuthCallbackUri(uri)) return;
+    if (!isEmailAuthCallbackDeepLink(uri)) return;
     pendingAuthDeepLink = true;
+    // PKCE の #code=... は Supabase の Deeplink だけでは query に載らず交換されないことがある。
+    unawaited(exchangeSessionFromEmailAuthDeepLink(uri!));
     final s = Supabase.instance.client.auth.currentSession;
     if (s != null && !s.user.isAnonymous) {
       pendingAuthDeepLink = false;
