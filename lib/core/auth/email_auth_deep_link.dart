@@ -35,6 +35,12 @@ Uri normalizeEmailAuthDeepLink(Uri uri) {
 Future<void> exchangeSessionFromEmailAuthDeepLink(Uri uri) async {
   final normalized = normalizeEmailAuthDeepLink(uri);
   try {
+    final current = Supabase.instance.client.auth.currentSession;
+    if (current != null && current.user.isAnonymous) {
+      // 匿名セッションが残っていると、メール認証後も匿名のまま見えることがあるため、
+      // callback の code 交換前にローカルセッションだけ破棄して切り替えを明確にする。
+      await Supabase.instance.client.auth.signOut(scope: SignOutScope.local);
+    }
     await Supabase.instance.client.auth.getSessionFromUrl(normalized);
   } catch (e, st) {
     assert(() {
