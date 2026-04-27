@@ -77,6 +77,8 @@ String? _authMessageFromCode(String? code) {
       return 'このメールアドレスは既にログイン（登録）済みのアカウントです。';
     case 'weak_password':
       return 'パスワードが要件を満たしていません。長めのパスワードを試してください。';
+    case 'same_password':
+      return '新しいパスワードは、現在のパスワードと異なるものを設定してください。';
     case 'email_not_confirmed':
       return 'メールアドレスがまだ確認されていません。確認メールのリンクを開いてください。';
     case 'signup_disabled':

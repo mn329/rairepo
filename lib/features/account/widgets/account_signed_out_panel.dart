@@ -31,7 +31,7 @@ class AccountSignedOutPanel extends ConsumerWidget {
   final bool isBusy;
   final bool isSignup;
 
-  /// 匿名セッションのまま、メール登録に進む（新規登録＝匿名の昇格）。
+  /// 匿名セッションかどうか（表示の一部・バリデーションで利用）。
   final bool isAnonymous;
 
   /// セッションが取れていない場合の「匿名で再接続」用。
@@ -42,9 +42,7 @@ class AccountSignedOutPanel extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final title = isAnonymous
-        ? (isSignup ? 'メールで新規登録' : 'メールでログイン')
-        : (isSignup ? '新規登録' : 'ログイン');
+    final title = isSignup ? '新規登録' : 'ログイン';
     return AccountExpandableSection(
       title: title,
       child: Column(
@@ -151,7 +149,9 @@ class AccountSignedOutPanel extends ConsumerWidget {
                 : () {
                     runGuarded(() async {
                       final user = ref.read(authUserProvider).asData?.value;
-                      if (user != null && !user.isAnonymous) {
+                      if (user != null &&
+                          !user.isAnonymous &&
+                          user.emailConfirmedAt != null) {
                         throw const AuthException('既にログイン（登録）済みのアカウントです。');
                       }
                       final e = emailController.text.trim();
@@ -166,38 +166,30 @@ class AccountSignedOutPanel extends ConsumerWidget {
                         if (password != passwordConfirmController.text) {
                           throw const AuthException('パスワード（確認）が一致しません。');
                         }
-                        if (isAnonymous) {
-                          await authService.upgradeAnonymousToPassword(
+                        await authService.signUpWithEmailPassword(
+                          email: e,
+                          password: password,
+                        );
+                        if (!context.mounted) return;
+                        FocusScope.of(context).unfocus();
+                        final needsConfirm = authService.currentSession == null;
+                        if (needsConfirm) {
+                          await showSignupEmailConfirmationDialog(
+                            context: context,
+                            authService: authService,
                             email: e,
-                            password: password,
                           );
-                          if (!context.mounted) return;
-                          FocusScope.of(context).unfocus();
+                        } else if (authService.currentUser?.emailConfirmedAt ==
+                            null) {
                           ScaffoldMessenger.of(context).showSnackBar(
                             const SnackBar(
                               content: Text('メールを送信しました。メール内のリンクから認証が必要です。'),
                             ),
                           );
                         } else {
-                          await authService.signUpWithPassword(
-                            email: e,
-                            password: password,
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('登録しました')),
                           );
-                          if (!context.mounted) return;
-                          FocusScope.of(context).unfocus();
-                          final needsConfirm =
-                              authService.currentSession == null;
-                          if (needsConfirm) {
-                            await showSignupEmailConfirmationDialog(
-                              context: context,
-                              authService: authService,
-                              email: e,
-                            );
-                          } else {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('登録しました')),
-                            );
-                          }
                         }
                       } else {
                         await authService.signInWithPassword(

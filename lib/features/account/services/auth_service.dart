@@ -38,11 +38,79 @@ class AuthService {
     required String email,
     required String password,
   }) async {
-    await _client.auth.signUp(
-      email: email.trim(),
-      password: password,
-      emailRedirectTo: _emailAuthRedirectTo,
-    );
+    await signUpWithEmailPassword(email: email, password: password);
+  }
+
+  /// メールでの新規登録。
+  ///
+  /// - セッションなし: `signUp`
+  /// - 匿名: メール＋パスワードへの昇格（`updateUser`）
+  /// - メール未確認の非匿名: 入力ミス後の訂正として `updateUser` で再送
+  ///
+  /// メール確認済みのユーザーが呼ぶと [AuthException] を投げます。
+  Future<void> signUpWithEmailPassword({
+    required String email,
+    required String password,
+    String? displayName,
+  }) async {
+    final user = currentUser;
+    final trimmedEmail = email.trim();
+
+    final data = <String, dynamic>{};
+    final trimmedName = displayName?.trim();
+    if (trimmedName != null && trimmedName.isNotEmpty) {
+      data['display_name'] = trimmedName;
+    }
+
+    if (user == null) {
+      await _client.auth.signUp(
+        email: trimmedEmail,
+        password: password,
+        emailRedirectTo: _emailAuthRedirectTo,
+      );
+      return;
+    }
+
+    if (user.isAnonymous ||
+        (!user.isAnonymous && user.emailConfirmedAt == null)) {
+      await _updatePendingEmailUser(
+        trimmedEmail: trimmedEmail,
+        password: password,
+        userMetadata: data.isEmpty ? null : data,
+      );
+      return;
+    }
+
+    throw const AuthException('既にログイン（登録）済みのアカウントです。');
+  }
+
+  /// メール未確認ユーザー向けの更新。
+  ///
+  /// メール訂正でパスワードが初回と同一のとき、GoTrue が `same_password`（422）を返すため、
+  /// メールのみの更新に切り替える。
+  Future<void> _updatePendingEmailUser({
+    required String trimmedEmail,
+    required String password,
+    Map<String, dynamic>? userMetadata,
+  }) async {
+    try {
+      await _client.auth.updateUser(
+        UserAttributes(
+          email: trimmedEmail,
+          password: password,
+          data: userMetadata,
+        ),
+        emailRedirectTo: _emailAuthRedirectTo,
+      );
+    } on AuthException catch (e) {
+      if (e.code != 'same_password') {
+        rethrow;
+      }
+      await _client.auth.updateUser(
+        UserAttributes(email: trimmedEmail, data: userMetadata),
+        emailRedirectTo: _emailAuthRedirectTo,
+      );
+    }
   }
 
   /// 匿名ログインします（開発中の動作確認などに利用）。
@@ -113,27 +181,10 @@ class AuthService {
     required String password,
     String? displayName,
   }) async {
-    final user = currentUser;
-    if (user == null) {
-      throw const AuthException('ユーザーが存在しません。');
-    }
-    if (!user.isAnonymous) {
-      throw const AuthException('既にログイン（登録）済みのアカウントです。');
-    }
-
-    final data = <String, dynamic>{};
-    final trimmedName = displayName?.trim();
-    if (trimmedName != null && trimmedName.isNotEmpty) {
-      data['display_name'] = trimmedName;
-    }
-
-    await _client.auth.updateUser(
-      UserAttributes(
-        email: email.trim(),
-        password: password,
-        data: data.isEmpty ? null : data,
-      ),
-      emailRedirectTo: _emailAuthRedirectTo,
+    await signUpWithEmailPassword(
+      email: email,
+      password: password,
+      displayName: displayName,
     );
   }
 

@@ -115,6 +115,24 @@ class AccountPage extends HookConsumerWidget {
                       runGuarded: runGuarded,
                       authService: authService,
                     )
+                  else if (user.emailConfirmedAt == null)
+                    AccountSignedOutPanel(
+                      emailController: emailController,
+                      passwordController: passwordController,
+                      passwordConfirmController: passwordConfirmController,
+                      isBusy: isBusy.value,
+                      isSignup: isSignup.value,
+                      isAnonymous: false,
+                      showConnectionRecovery: false,
+                      onToggleSignupMode: () {
+                        isSignup.value = !isSignup.value;
+                        if (isSignup.value) {
+                          passwordConfirmController.clear();
+                        }
+                      },
+                      runGuarded: runGuarded,
+                      authService: authService,
+                    )
                   else
                     AccountSignedInPanel(
                       isBusy: isBusy.value,
