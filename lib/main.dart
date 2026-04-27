@@ -45,8 +45,10 @@ void main() async {
     ),
   );
 
+  // セッションがない場合は匿名サインインを試みる
   await _ensureAnonymousSession();
 
+  // メール認証コールバックの処理を追加
   attachEmailLinkAccountNavigation();
 
   // 1. ProviderScope: Riverpodの状態管理をアプリ全体で使えるようにする
